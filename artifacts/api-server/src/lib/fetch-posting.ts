@@ -44,6 +44,73 @@ function collapseWhitespace(s: string): string {
   return s.replace(/[ \t\f\v]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+const APIFY_TIMEOUT_MS = 60_000;
+
+async function fetchPostingViaApify(
+  url: URL,
+): Promise<FetchedPosting | null> {
+  const token = process.env.APIFY_TOKEN;
+  if (!token) return null;
+
+  const endpoint = `https://api.apify.com/v2/acts/apify~website-content-crawler/run-sync-get-dataset-items?token=${encodeURIComponent(token)}&timeout=55`;
+
+  const input = {
+    startUrls: [{ url: url.toString() }],
+    maxCrawlPages: 1,
+    maxCrawlDepth: 0,
+    crawlerType: "playwright:adaptive",
+    removeElementsCssSelector:
+      "nav, footer, header, aside, script, style, noscript, iframe, .cookie, .banner, .newsletter",
+    saveMarkdown: true,
+    saveHtml: false,
+    proxyConfiguration: { useApifyProxy: true },
+  };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), APIFY_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(endpoint, {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    if ((err as Error).name === "AbortError") {
+      throw new Error("Apify request timed out");
+    }
+    throw new Error(`Apify request failed: ${(err as Error).message}`);
+  }
+  clearTimeout(timer);
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(
+      `Apify returned ${res.status}: ${body.slice(0, 200) || "no body"}`,
+    );
+  }
+
+  const items = (await res.json()) as Array<{
+    text?: string;
+    markdown?: string;
+    metadata?: { title?: string; description?: string; canonicalUrl?: string };
+    url?: string;
+  }>;
+  if (!Array.isArray(items) || items.length === 0) return null;
+
+  const item = items[0];
+  const text = (item.markdown || item.text || "").trim();
+  if (text.length < 100) return null;
+
+  const jobDescription = collapseWhitespace(text).slice(0, 20000);
+  const jobTitle = item.metadata?.title?.trim().slice(0, 300) || undefined;
+  const company = url.hostname.slice(0, 200);
+
+  return { jobDescription, jobTitle, company };
+}
+
 export async function fetchPostingFromUrl(
   rawUrl: string,
 ): Promise<FetchedPosting> {
@@ -130,11 +197,29 @@ export async function fetchPostingFromUrl(
   }
 
   const jobDescription = collapseWhitespace(bestText).slice(0, 20000);
-  if (jobDescription.length < 100) {
+  if (jobDescription.length < 400) {
+    // Simple fetch returned too little — try Apify (renders JS, bypasses bot walls).
+    const apifyResult = await fetchPostingViaApify(url).catch((err: Error) => {
+      throw new Error(
+        `Page didn't expose enough text via plain fetch, and Apify fallback failed: ${err.message}`,
+      );
+    });
+    if (apifyResult) return apifyResult;
     throw new Error(
       "Could not extract a meaningful job description from the page",
     );
   }
 
   return { jobDescription, jobTitle, company };
+}
+
+export async function fetchPostingFromUrlForce(
+  rawUrl: string,
+): Promise<FetchedPosting> {
+  const url = assertSafeUrl(rawUrl);
+  const result = await fetchPostingViaApify(url);
+  if (!result) {
+    throw new Error("Apify is not configured or returned no content");
+  }
+  return result;
 }

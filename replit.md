@@ -10,6 +10,7 @@ Open-source job-posting fraud detector. Paste a suspicious job posting; HireShie
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL`, `AI_INTEGRATIONS_OPENAI_BASE_URL`, `AI_INTEGRATIONS_OPENAI_API_KEY`
+- Optional env: `APIFY_TOKEN` — enables JS-rendered page scraping fallback for `/analyze` URL mode
 
 ## Stack
 
@@ -27,6 +28,7 @@ Open-source job-posting fraud detector. Paste a suspicious job posting; HireShie
 - NLP heuristics: `lib/nlp-engine/src/` (tokenize, tfidf, suspicious-phrases, urgency, stylometry, metadata, duplicate, analyze)
 - Analyzer (heuristics + LLM fusion): `artifacts/api-server/src/lib/analyzer.ts`
 - OpenAI client: `artifacts/api-server/src/lib/openai-client.ts`
+- URL → posting extractor: `artifacts/api-server/src/lib/fetch-posting.ts` (simple fetch + cheerio, with Apify Website Content Crawler as JS-rendered fallback)
 - API routes: `artifacts/api-server/src/routes/`
 - Frontend pages: `artifacts/hireshield/src/pages/{home,analyze,community,analysis-permalink,not-found}.tsx`
 - Report component: `artifacts/hireshield/src/components/analysis-report.tsx`
