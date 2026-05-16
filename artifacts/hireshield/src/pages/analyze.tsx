@@ -15,18 +15,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Shield, Zap, Loader2, Search } from "lucide-react";
+import { Shield, Zap, Loader2, Search, Link2, ClipboardPaste } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Analysis } from "@workspace/api-client-react";
 
-const formSchema = z.object({
+const baseSchema = z.object({
   jobTitle: z.string().max(300).optional(),
   company: z.string().max(200).optional(),
   recruiterEmail: z.string().max(320).optional(),
-  jobUrl: z.string().max(2048).optional(),
-  jobDescription: z.string().min(20, "Job description must be at least 20 characters").max(20000),
+  jobUrl: z
+    .string()
+    .max(2048)
+    .regex(/^https?:\/\//i, "Must start with http:// or https://")
+    .optional()
+    .or(z.literal("")),
+  jobDescription: z.string().max(20000).optional().or(z.literal("")),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+const formSchema = baseSchema.superRefine((val, ctx) => {
+  const hasDesc = (val.jobDescription ?? "").trim().length >= 20;
+  const hasUrl = (val.jobUrl ?? "").trim().length > 0;
+  if (!hasDesc && !hasUrl) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["jobDescription"],
+      message: "Paste a description (min 20 chars) or provide a URL to fetch.",
+    });
+  }
+});
+
+type FormValues = z.infer<typeof baseSchema>;
 
 export default function AnalyzePage() {
   const [, setLocation] = useLocation();
@@ -35,6 +53,7 @@ export default function AnalyzePage() {
   
   const { data: examples } = useListAnalysisExamples();
   const createAnalysis = useCreateAnalysis();
+  const [mode, setMode] = useState<"paste" | "url">("paste");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -52,14 +71,23 @@ export default function AnalyzePage() {
   // Handle loading state manually for the fancy animation
   const [isScanning, setIsScanning] = useState(false);
   const [scanStep, setScanStep] = useState(0);
-  const scanSteps = [
-    "Parsing text content...",
-    "Extracting metadata & URLs...",
-    "Running heuristic patterns...",
-    "Analyzing stylometry...",
-    "Querying LLM reasoning...",
-    "Calculating Trust Score..."
-  ];
+  const scanSteps = mode === "url"
+    ? [
+        "Fetching page from URL...",
+        "Extracting posting text...",
+        "Running heuristic patterns...",
+        "Analyzing stylometry...",
+        "Querying LLM reasoning...",
+        "Calculating Trust Score...",
+      ]
+    : [
+        "Parsing text content...",
+        "Extracting metadata & URLs...",
+        "Running heuristic patterns...",
+        "Analyzing stylometry...",
+        "Querying LLM reasoning...",
+        "Calculating Trust Score...",
+      ];
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -77,15 +105,28 @@ export default function AnalyzePage() {
     setResult(null);
     
     try {
-      const res = await createAnalysis.mutateAsync({ data });
-      setResult(res);
+      // Strip empty optional strings before sending.
+      const payload: FormValues = {
+        ...data,
+        jobUrl: data.jobUrl?.trim() || undefined,
+        jobDescription: data.jobDescription?.trim() || undefined,
+        jobTitle: data.jobTitle?.trim() || undefined,
+        company: data.company?.trim() || undefined,
+        recruiterEmail: data.recruiterEmail?.trim() || undefined,
+      };
+      const res = await createAnalysis.mutateAsync({ data: payload });
       // Invalidate caches
       queryClient.invalidateQueries({ queryKey: getListAnalysesQueryKey() });
       queryClient.invalidateQueries({ queryKey: getGetCommunityStatsQueryKey() });
       // Update URL silently
       window.history.pushState({}, "", `/analyses/${res.id}`);
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } }; message?: string };
+      const message =
+        err?.response?.data?.error ||
+        err?.message ||
+        "Analysis failed. Please try again.";
+      form.setError("root", { message });
     } finally {
       setIsScanning(false);
     }
@@ -169,41 +210,85 @@ export default function AnalyzePage() {
                       </FormItem>
                     )} />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="recruiterEmail" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Recruiter Email <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
-                        <FormControl><Input type="email" placeholder="e.g. hr@acme.com" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="jobUrl" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Job URL <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
-                        <FormControl><Input type="url" placeholder="https://..." {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  </div>
-                  <FormField control={form.control} name="jobDescription" render={({ field }) => (
+                  <FormField control={form.control} name="recruiterEmail" render={({ field }) => (
                     <FormItem>
-                      <div className="flex justify-between items-end">
-                        <FormLabel>Job Description <span className="text-destructive">*</span></FormLabel>
-                        <span className={`text-xs font-mono ${descriptionLength > 20000 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                          {descriptionLength} / 20k
-                        </span>
-                      </div>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Paste the full job description here..." 
-                          className="min-h-[300px] font-mono text-sm resize-y" 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormDescription>The main body of the job post. Exclude generic site headers.</FormDescription>
+                      <FormLabel>Recruiter Email <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
+                      <FormControl><Input type="email" placeholder="e.g. hr@acme.com" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
+
+                  <Tabs value={mode} onValueChange={(v) => setMode(v as "paste" | "url")} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="paste" className="gap-2">
+                        <ClipboardPaste className="w-4 h-4" /> Paste text
+                      </TabsTrigger>
+                      <TabsTrigger value="url" className="gap-2">
+                        <Link2 className="w-4 h-4" /> From URL
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="paste" className="space-y-4 pt-4">
+                      <FormField control={form.control} name="jobUrl" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Job URL <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
+                          <FormControl><Input type="url" placeholder="https://..." {...field} /></FormControl>
+                          <FormDescription>Linked from the report for context, not fetched.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="jobDescription" render={({ field }) => (
+                        <FormItem>
+                          <div className="flex justify-between items-end">
+                            <FormLabel>Job Description <span className="text-destructive">*</span></FormLabel>
+                            <span className={`text-xs font-mono ${descriptionLength > 20000 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              {descriptionLength} / 20k
+                            </span>
+                          </div>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Paste the full job description here..."
+                              className="min-h-[260px] font-mono text-sm resize-y"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>The main body of the job post. Exclude generic site headers.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                    </TabsContent>
+
+                    <TabsContent value="url" className="space-y-4 pt-4">
+                      <FormField control={form.control} name="jobUrl" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Job URL <span className="text-destructive">*</span></FormLabel>
+                          <FormControl>
+                            <Input
+                              type="url"
+                              placeholder="https://company.com/careers/senior-engineer"
+                              className="font-mono text-sm"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            We'll fetch the page and extract the posting text. Only public http(s) URLs are supported.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <div className="rounded-md border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground">
+                        <p className="font-mono">
+                          &gt; Some sites block automated fetches or require JavaScript. If the URL fails, switch to <span className="text-foreground">Paste text</span>.
+                        </p>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+
+                  {form.formState.errors.root && (
+                    <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                      {form.formState.errors.root.message}
+                    </div>
+                  )}
 
                   <Button type="submit" size="lg" className="w-full gap-2 font-bold" disabled={isScanning}>
                     {isScanning ? (
@@ -249,7 +334,7 @@ export default function AnalyzePage() {
               <Shield className="w-16 h-16 text-muted-foreground/30 mb-4" />
               <h3 className="text-xl font-semibold mb-2">Awaiting Target</h3>
               <p className="text-muted-foreground text-sm max-w-sm">
-                Paste a job posting on the left to begin. The engine will parse the text, evaluate heuristics, and generate a comprehensive trust report.
+                Paste a job posting or drop in a URL on the left to begin. The engine will parse the text, evaluate heuristics, and generate a comprehensive trust report.
               </p>
               <div className="mt-8 grid grid-cols-2 gap-4 w-full max-w-sm text-left">
                 <div className="p-3 bg-card rounded border text-xs text-muted-foreground flex items-start gap-2">

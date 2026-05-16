@@ -189,13 +189,15 @@ components:
 
     AnalysisInput:
       type: object
-      required: [jobDescription]
+      description: >
+        Provide either jobDescription (paste mode) or jobUrl (fetch mode).
+        If only jobUrl is supplied, the server fetches and extracts the posting text.
       properties:
         jobTitle: { type: string, maxLength: 300 }
         company: { type: string, maxLength: 200 }
         recruiterEmail: { type: string, maxLength: 320 }
         jobUrl: { type: string, maxLength: 2048, pattern: "^https?://" }
-        jobDescription: { type: string, minLength: 20, maxLength: 20000 }
+        jobDescription: { type: string, maxLength: 20000 }
 
     AnalysisSummary:
       type: object

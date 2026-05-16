@@ -9,6 +9,7 @@ import {
   ListAnalysesResponse,
 } from "@workspace/api-zod";
 import { analyzePosting } from "../lib/analyzer";
+import { fetchPostingFromUrl } from "../lib/fetch-posting";
 
 const router: IRouter = Router();
 
@@ -55,6 +56,33 @@ router.post("/analyses", async (req, res): Promise<void> => {
   }
   const body = parsed.data;
 
+  // Resolve job description: either provided directly, or fetched from URL.
+  let jobDescription = body.jobDescription?.trim() ?? "";
+  let jobTitle = body.jobTitle?.trim() ?? "";
+  let company = body.company?.trim() ?? "";
+
+  if (jobDescription.length < 20) {
+    if (!body.jobUrl) {
+      res.status(400).json({
+        error:
+          "Provide either a job description (min 20 characters) or a job URL to fetch.",
+      });
+      return;
+    }
+    try {
+      const fetched = await fetchPostingFromUrl(body.jobUrl);
+      jobDescription = fetched.jobDescription;
+      if (!jobTitle && fetched.jobTitle) jobTitle = fetched.jobTitle;
+      if (!company && fetched.company) company = fetched.company;
+    } catch (err) {
+      req.log.warn({ err, url: body.jobUrl }, "URL fetch failed");
+      res.status(400).json({
+        error: `Could not fetch posting from URL: ${(err as Error).message}`,
+      });
+      return;
+    }
+  }
+
   // Pull a small corpus of recent descriptions for duplicate detection
   const corpusRows = await db
     .select({
@@ -66,22 +94,22 @@ router.post("/analyses", async (req, res): Promise<void> => {
     .limit(50);
 
   const result = await analyzePosting({
-    jobTitle: body.jobTitle ?? "Untitled role",
-    company: body.company ?? "Unknown company",
+    jobTitle: jobTitle || "Untitled role",
+    company: company || "Unknown company",
     recruiterEmail: body.recruiterEmail,
     jobUrl: body.jobUrl,
-    jobDescription: body.jobDescription,
+    jobDescription,
     corpus: corpusRows,
   });
 
   const [row] = await db
     .insert(analysesTable)
     .values({
-      jobTitle: body.jobTitle ?? "Untitled role",
-      company: body.company ?? "Unknown company",
+      jobTitle: jobTitle || "Untitled role",
+      company: company || "Unknown company",
       recruiterEmail: body.recruiterEmail ?? null,
       jobUrl: body.jobUrl ?? null,
-      jobDescription: body.jobDescription,
+      jobDescription,
       trustScore: result.trustScore,
       fraudRisk: result.fraudRisk,
       ghostJobProbability: result.ghostJobProbability,

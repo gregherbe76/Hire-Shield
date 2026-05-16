@@ -58,6 +58,10 @@ export interface TrustSignal {
   score?: number | null;
 }
 
+/**
+ * Provide either jobDescription (paste mode) or jobUrl (fetch mode). If only jobUrl is supplied, the server fetches and extracts the posting text.
+
+ */
 export interface AnalysisInput {
   /** @maxLength 300 */
   jobTitle?: string;
@@ -70,11 +74,8 @@ export interface AnalysisInput {
      * @pattern ^https?://
      */
   jobUrl?: string;
-  /**
-     * @minLength 20
-     * @maxLength 20000
-     */
-  jobDescription: string;
+  /** @maxLength 20000 */
+  jobDescription?: string;
 }
 
 export interface AnalysisSummary {

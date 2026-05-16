@@ -66,7 +66,6 @@ export const createAnalysisBodyJobUrlMax = 2048;
 
 
 export const createAnalysisBodyJobUrlRegExp = new RegExp('^https?:\/');
-export const createAnalysisBodyJobDescriptionMin = 20;
 export const createAnalysisBodyJobDescriptionMax = 20000;
 
 
@@ -76,8 +75,8 @@ export const CreateAnalysisBody = zod.object({
   "company": zod.string().max(createAnalysisBodyCompanyMax).optional(),
   "recruiterEmail": zod.string().max(createAnalysisBodyRecruiterEmailMax).optional(),
   "jobUrl": zod.string().max(createAnalysisBodyJobUrlMax).regex(createAnalysisBodyJobUrlRegExp).optional(),
-  "jobDescription": zod.string().min(createAnalysisBodyJobDescriptionMin).max(createAnalysisBodyJobDescriptionMax)
-})
+  "jobDescription": zod.string().max(createAnalysisBodyJobDescriptionMax).optional()
+}).describe('Provide either jobDescription (paste mode) or jobUrl (fetch mode). If only jobUrl is supplied, the server fetches and extracts the posting text.\n')
 
 
 /**
