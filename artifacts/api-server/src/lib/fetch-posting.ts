@@ -49,7 +49,7 @@ const APIFY_TIMEOUT_MS = 60_000;
 async function fetchPostingViaApify(
   url: URL,
 ): Promise<FetchedPosting | null> {
-  const token = process.env.APIFY_TOKEN;
+  const token = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN;
   if (!token) return null;
 
   const endpoint = `https://api.apify.com/v2/acts/apify~website-content-crawler/run-sync-get-dataset-items?token=${encodeURIComponent(token)}&timeout=55`;
