@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🛡️ HireShield
+<img src=".github/assets/logo.svg" alt="HireShield" width="520" />
+
+# HireShield
 
 **Know if a job is real before you apply.**
 
@@ -162,10 +164,14 @@ If you find a vulnerability, please **do not** open a public issue. Read [SECURI
 
 [MIT](LICENSE) © HireShield contributors.
 
+## Topics
+
+`job-scam-detection` · `ghost-jobs` · `recruitment-fraud` · `phishing-detection` · `nlp` · `openai` · `gpt` · `trust-score` · `typescript` · `react` · `vite` · `express` · `drizzle-orm` · `postgres` · `pnpm-workspace` · `open-source`
+
 ---
 
 <div align="center">
 
-Built with ❤️ on [Replit](https://replit.com). If HireShield helped you dodge a scam, [star the repo](https://github.com/YOUR_USERNAME/hireshield) ⭐ — it really helps.
+If HireShield helped you dodge a scam, star the repo ⭐ — it really helps.
 
 </div>

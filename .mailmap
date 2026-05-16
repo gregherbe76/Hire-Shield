@@ -1,0 +1,3 @@
+# Map automated commits to the maintainer so GitHub's contributor list stays clean.
+# Format: Proper Name <proper@email> Commit Name <commit@email>
+gh63 <40362599-gh63@users.noreply.replit.com> agent <agent@replit.com>
