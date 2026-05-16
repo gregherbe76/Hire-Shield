@@ -3,20 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: HireShield API — open-source recruitment trust intelligence.
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: analyses
+    description: Job posting trust analyses
+  - name: waitlist
+    description: Community waitlist
+  - name: stats
+    description: Aggregate community stats
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +29,307 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /analyses:
+    get:
+      operationId: listAnalyses
+      tags: [analyses]
+      summary: List recent public analyses
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalysisSummary"
+    post:
+      operationId: createAnalysis
+      tags: [analyses]
+      summary: Analyze a job posting for trust signals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalysisInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /analyses/{id}:
+    get:
+      operationId: getAnalysis
+      tags: [analyses]
+      summary: Get a single analysis with full detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /analysis-examples:
+    get:
+      operationId: listAnalysisExamples
+      tags: [analyses]
+      summary: Curated example fraudulent / suspicious / clean postings
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalysisExample"
+
+  /community/stats:
+    get:
+      operationId: getCommunityStats
+      tags: [stats]
+      summary: Aggregate community stats (totals + breakdowns)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityStats"
+
+  /waitlist:
+    post:
+      operationId: joinWaitlist
+      tags: [waitlist]
+      summary: Join the contributor / early-access waitlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WaitlistInput"
+      responses:
+        "201":
+          description: Joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaitlistEntry"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
+        status: { type: string }
 
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+
+    FraudRisk:
+      type: string
+      enum: [low, medium, high, critical]
+
+    SignalSeverity:
+      type: string
+      enum: [info, low, medium, high]
+
+    SignalCategory:
+      type: string
+      enum: [nlp, metadata, urgency, stylometry, duplicate, domain, llm]
+
+    TrustSignal:
+      type: object
+      required: [label, severity, category, detail]
+      properties:
+        label: { type: string }
+        severity: { $ref: "#/components/schemas/SignalSeverity" }
+        category: { $ref: "#/components/schemas/SignalCategory" }
+        detail: { type: string }
+        score:
+          type: ["number", "null"]
+          description: Optional numeric weight contributed to the overall score
+
+    AnalysisInput:
+      type: object
+      required: [jobDescription]
+      properties:
+        jobTitle: { type: string, maxLength: 300 }
+        company: { type: string, maxLength: 200 }
+        recruiterEmail: { type: string, maxLength: 320 }
+        jobUrl: { type: string, maxLength: 2048, pattern: "^https?://" }
+        jobDescription: { type: string, minLength: 20, maxLength: 20000 }
+
+    AnalysisSummary:
+      type: object
+      required:
+        - id
+        - jobTitle
+        - company
+        - trustScore
+        - fraudRisk
+        - ghostJobProbability
+        - confidenceLevel
+        - createdAt
+      properties:
+        id: { type: string }
+        jobTitle: { type: string }
+        company: { type: string }
+        trustScore: { type: integer, minimum: 0, maximum: 100 }
+        fraudRisk: { $ref: "#/components/schemas/FraudRisk" }
+        ghostJobProbability: { type: integer, minimum: 0, maximum: 100 }
+        confidenceLevel: { type: integer, minimum: 0, maximum: 100 }
+        topSignal:
+          type: ["string", "null"]
+        createdAt: { type: string, format: date-time }
+
+    Analysis:
+      type: object
+      required:
+        - id
+        - jobTitle
+        - company
+        - jobDescription
+        - trustScore
+        - fraudRisk
+        - ghostJobProbability
+        - confidenceLevel
+        - signals
+        - aiExplanation
+        - candidateSummary
+        - createdAt
+      properties:
+        id: { type: string }
+        jobTitle: { type: string }
+        company: { type: string }
+        recruiterEmail:
+          type: ["string", "null"]
+        jobUrl:
+          type: ["string", "null"]
+        jobDescription: { type: string }
+        trustScore: { type: integer, minimum: 0, maximum: 100 }
+        fraudRisk: { $ref: "#/components/schemas/FraudRisk" }
+        ghostJobProbability: { type: integer, minimum: 0, maximum: 100 }
+        confidenceLevel: { type: integer, minimum: 0, maximum: 100 }
+        signals:
+          type: array
+          items: { $ref: "#/components/schemas/TrustSignal" }
+        aiExplanation: { type: string }
+        candidateSummary: { type: string }
+        recommendedActions:
+          type: array
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    AnalysisExample:
+      type: object
+      required: [id, label, jobTitle, company, jobDescription, expectedRisk, description]
+      properties:
+        id: { type: string }
+        label: { type: string, description: "Short tag e.g. 'Classic crypto scam'" }
+        jobTitle: { type: string }
+        company: { type: string }
+        jobDescription: { type: string }
+        expectedRisk: { $ref: "#/components/schemas/FraudRisk" }
+        description: { type: string, description: "Why this example matters" }
+
+    RiskBreakdown:
+      type: object
+      required: [risk, count]
+      properties:
+        risk: { $ref: "#/components/schemas/FraudRisk" }
+        count: { type: integer }
+
+    SignalCount:
+      type: object
+      required: [label, count]
+      properties:
+        label: { type: string }
+        count: { type: integer }
+
+    CommunityStats:
+      type: object
+      required:
+        - totalAnalyses
+        - flaggedCount
+        - averageTrustScore
+        - ghostJobShare
+        - riskBreakdown
+        - topSignals
+        - contributors
+        - lastUpdated
+      properties:
+        totalAnalyses: { type: integer }
+        flaggedCount: { type: integer, description: "Analyses with risk >= medium" }
+        averageTrustScore: { type: integer, minimum: 0, maximum: 100 }
+        ghostJobShare: { type: integer, minimum: 0, maximum: 100, description: "Percent of analyses with ghost probability >= 60" }
+        riskBreakdown:
+          type: array
+          items: { $ref: "#/components/schemas/RiskBreakdown" }
+        topSignals:
+          type: array
+          items: { $ref: "#/components/schemas/SignalCount" }
+        contributors: { type: integer, description: "GitHub-style contributor count placeholder" }
+        lastUpdated: { type: string, format: date-time }
+
+    WaitlistRole:
+      type: string
+      enum: [candidate, recruiter, contributor, researcher]
+
+    WaitlistInput:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email, maxLength: 320 }
+        role: { $ref: "#/components/schemas/WaitlistRole" }
+        github: { type: string, maxLength: 200 }
+        note: { type: string, maxLength: 1000 }
+
+    WaitlistEntry:
+      type: object
+      required: [id, email, createdAt]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        role:
+          oneOf:
+            - $ref: "#/components/schemas/WaitlistRole"
+            - type: "null"
+        createdAt: { type: string, format: date-time }

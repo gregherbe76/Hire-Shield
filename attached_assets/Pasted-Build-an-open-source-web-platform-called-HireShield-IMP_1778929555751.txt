@@ -1,0 +1,231 @@
+Build an open-source web platform called “HireShield”.
+
+IMPORTANT:
+This is NOT a paid SaaS.
+
+There must be:
+- NO Stripe
+- NO subscriptions
+- NO payment logic
+
+The project is:
+- fully open-source
+- GitHub-first
+- community-driven
+- recruiter and candidate focused
+
+The goal:
+Detect suspicious and fraudulent job descriptions using:
+- NLP
+- heuristic analysis
+- embeddings
+- metadata intelligence
+- LLM reasoning
+
+==================================================
+POSITIONING
+==================================================
+
+“Open-source recruitment trust intelligence.”
+
+The platform helps users:
+- analyze suspicious job posts
+- detect scam patterns
+- identify ghost jobs
+- detect phishing recruitment
+- understand trust signals
+
+The system NEVER directly accuses companies of fraud.
+
+Instead it shows:
+- trust indicators
+- suspicious signals
+- confidence levels
+- explainable warnings
+
+==================================================
+TECH STACK
+==================================================
+
+Frontend:
+- React
+- TypeScript
+- Vite
+- Tailwind
+- shadcn/ui
+
+Backend:
+- Node.js
+- Express
+- TypeScript
+
+Database:
+- PostgreSQL
+- Drizzle ORM
+
+AI:
+- OpenAI API
+
+Embeddings:
+- pgvector
+
+Deployment:
+- Replit-ready
+
+==================================================
+LANDING PAGE
+==================================================
+
+Build a beautiful onboarding homepage.
+
+Goals:
+- attract GitHub stars
+- explain the mission
+- collect emails
+- onboard contributors
+- encourage community participation
+
+Sections:
+- hero
+- how it works
+- fake job detection examples
+- scam indicators
+- open-source mission
+- contributor CTA
+- GitHub CTA
+- email waitlist
+- live demo section
+
+Hero headline:
+“Know if a job is real before you apply.”
+
+Subheadline:
+“An open-source AI system for detecting suspicious recruitment posts.”
+
+CTA buttons:
+- Analyze a Job
+- View on GitHub
+
+==================================================
+FEATURES
+==================================================
+
+1. Job analysis form
+
+Inputs:
+- job title
+- company
+- recruiter email
+- job URL
+- job description
+
+Outputs:
+- trust score
+- fraud risk
+- ghost job probability
+- suspicious signals
+- AI explanation
+- confidence level
+
+==================================================
+NLP ENGINE
+==================================================
+
+Create:
+lib/nlp-engine/
+
+Implement:
+- TF-IDF
+- cosine similarity
+- suspicious phrase detection
+- urgency analysis
+- spam wording analysis
+- duplicate template detection
+- stylometric analysis
+
+==================================================
+EMBEDDINGS
+==================================================
+
+Implement:
+- semantic similarity search
+- scam cluster detection
+- duplicate job analysis
+
+==================================================
+METADATA ANALYSIS
+==================================================
+
+Analyze:
+- recruiter domains
+- disposable emails
+- suspicious URLs
+- fake company indicators
+
+==================================================
+LLM ANALYSIS
+==================================================
+
+Use GPT-4o for:
+- contextual reasoning
+- explainability
+- candidate-friendly summaries
+
+Never let the LLM alone determine the final score.
+
+==================================================
+ARCHITECTURE
+==================================================
+
+Structure:
+apps/
+packages/
+lib/
+api/
+
+Modular and contributor-friendly.
+
+==================================================
+OPEN SOURCE FRIENDLY
+==================================================
+
+Generate:
+- README
+- CONTRIBUTING.md
+- LICENSE
+- .env.example
+- architecture docs
+- setup instructions
+- sample datasets
+- issue templates
+- GitHub Actions CI
+
+==================================================
+DESIGN STYLE
+==================================================
+
+Style:
+- modern
+- cybersecurity inspired
+- dark mode
+- minimal
+- premium open-source aesthetic
+
+Inspiration:
+- PostHog
+- Supabase
+- Vercel
+- Cloudflare
+- Langfuse
+
+==================================================
+IMPORTANT
+==================================================
+
+The onboarding experience must feel:
+- credible
+- transparent
+- community-driven
+- mission-oriented
+
+NOT corporate SaaS.
