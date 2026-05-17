@@ -1,0 +1,46 @@
+# Build outputs
+**/dist
+**/build
+**/.next
+**/.turbo
+**/.cache
+**/.expo
+
+# Dependencies
+**/node_modules
+.pnpm-store
+
+# Local config / secrets
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Replit-specific
+.replit
+.replitignore
+.local
+.config
+.agents
+replit.md
+attached_assets
+
+# VCS
+.git
+.gitignore
+.mailmap
+
+# Docs (not needed in image)
+.github
+*.md
+!README.md
+
+# Test artifacts
+coverage
+*.tsbuildinfo
+**/*.tsbuildinfo

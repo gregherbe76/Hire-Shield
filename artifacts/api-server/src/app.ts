@@ -1,6 +1,8 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import path from "node:path";
+import fs from "node:fs";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -30,5 +32,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// In standalone (Docker) production mode, also serve the built frontend.
+// In Replit, the shared proxy handles frontend routing — set SERVE_STATIC=0 to disable.
+const staticDir = process.env["STATIC_DIR"];
+const serveStatic =
+  process.env["SERVE_STATIC"] !== "0" &&
+  process.env["NODE_ENV"] === "production" &&
+  staticDir &&
+  fs.existsSync(staticDir);
+
+if (serveStatic && staticDir) {
+  app.use(express.static(staticDir, { index: false, maxAge: "1h" }));
+  app.get(/^\/(?!api\/).*/, (_req, res) => {
+    res.sendFile(path.join(staticDir, "index.html"));
+  });
+  logger.info({ staticDir }, "Serving built frontend as static files");
+}
 
 export default app;

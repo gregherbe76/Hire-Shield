@@ -1,0 +1,73 @@
+## HireShield — one-command local deployment
+##
+## Usage:
+##   cp .env.example .env   # then fill in AI_INTEGRATIONS_OPENAI_*
+##   docker compose up --build
+##
+## Then open http://localhost:8080
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hireshield
+      POSTGRES_PASSWORD: hireshield
+      POSTGRES_DB: hireshield
+    volumes:
+      - hireshield-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hireshield -d hireshield"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  migrate:
+    build:
+      context: .
+      target: build
+    command: pnpm --filter @workspace/db run push
+    environment:
+      DATABASE_URL: postgres://hireshield:hireshield@db:5432/hireshield
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_URL: postgres://hireshield:hireshield@db:5432/hireshield
+      AI_INTEGRATIONS_OPENAI_BASE_URL: ${AI_INTEGRATIONS_OPENAI_BASE_URL}
+      AI_INTEGRATIONS_OPENAI_API_KEY: ${AI_INTEGRATIONS_OPENAI_API_KEY}
+      APIFY_API_TOKEN: ${APIFY_API_TOKEN:-}
+      SESSION_SECRET: ${SESSION_SECRET:-change-me-in-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "-qO-",
+          "http://127.0.0.1:8080/api/healthz",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  hireshield-db:

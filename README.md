@@ -85,7 +85,29 @@ hireshield/
 
 ## Getting started
 
-### Prerequisites
+### Quick start with Docker (recommended)
+
+The fastest way to try HireShield locally — one command brings up Postgres,
+runs the migrations, and serves the app on <http://localhost:8080>.
+
+```bash
+git clone https://github.com/gh63/hireshield.git
+cd hireshield
+cp .env.example .env   # then fill in AI_INTEGRATIONS_OPENAI_*
+docker compose up --build
+```
+
+What you get:
+
+- `db` — PostgreSQL 16 with a persistent volume
+- `migrate` — one-shot job that pushes the Drizzle schema
+- `app` — the API server **and** the built React frontend, served on a single port
+
+Stop with `docker compose down` (or `down -v` to wipe the database).
+
+### Manual setup
+
+#### Prerequisites
 
 - **Node.js 24**
 - **pnpm 9+** (`corepack enable pnpm`)
