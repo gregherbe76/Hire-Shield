@@ -73,6 +73,24 @@ Releases are automated. Every push to `main` triggers the `Release Please` workf
 
 No manual tagging needed. There's no public package on npm — HireShield is deployed as a hosted app, and forks are expected to deploy their own.
 
+## Tests
+
+```bash
+pnpm run test              # full suite across all packages
+pnpm --filter @workspace/nlp-engine run test
+pnpm --filter @workspace/api-server run test
+pnpm --filter @workspace/api-server run test:watch
+```
+
+Coverage focuses on the high-value, deterministic paths:
+
+- `lib/nlp-engine/` — tokenizer, urgency, suspicious-phrases, metadata, end-to-end analyzer
+- `artifacts/api-server/src/lib/fetch-posting.ts` — SSRF guard, content-type, size limits, HTML extraction (mocked `fetch`)
+- `artifacts/api-server/src/lib/analyzer.ts` — heuristics ↔ LLM fusion, score clamping, fallback behaviour (mocked OpenAI client)
+- `artifacts/api-server/src/app.ts` — health endpoint, 404 handling, CORS (via `supertest`)
+
+New features should ship with tests. Bug fixes should ship with a regression test.
+
 ## Getting credit
 
 This project follows the [all-contributors](https://allcontributors.org/) specification. Any kind of contribution counts — code, docs, design, ideas, bug reports, reviews. To add yourself (or someone else), comment on any issue or PR:

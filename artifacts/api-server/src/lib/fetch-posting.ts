@@ -19,21 +19,50 @@ function assertSafeUrl(rawUrl: string): URL {
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Only http and https URLs are supported");
   }
-  const host = url.hostname.toLowerCase();
+  // Node's URL keeps IPv6 hostnames in bracketed form ("[::1]"), so strip
+  // brackets before comparing — otherwise the loopback check silently misses.
+  const rawHost = url.hostname.toLowerCase();
+  const host =
+    rawHost.startsWith("[") && rawHost.endsWith("]")
+      ? rawHost.slice(1, -1)
+      : rawHost;
+
+  // IPv4-mapped IPv6 has two surface forms:
+  //   - dotted-quad:  "::ffff:127.0.0.1"
+  //   - hex (the form Node's URL normalizes to):  "::ffff:7f00:1"
+  // Round-trip both back to dotted-quad so the IPv4 checks below catch them.
+  let effective = host;
+  const dottedMatch =
+    /^::(?:ffff:)?((?:\d{1,3}\.){3}\d{1,3})$/.exec(host) ??
+    /^::(?:ffff:)?0:((?:\d{1,3}\.){3}\d{1,3})$/.exec(host);
+  if (dottedMatch) {
+    effective = dottedMatch[1]!;
+  } else {
+    const hexMatch = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(host);
+    if (hexMatch) {
+      const hi = parseInt(hexMatch[1]!, 16);
+      const lo = parseInt(hexMatch[2]!, 16);
+      effective = `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+    }
+  }
+
   if (
-    host === "localhost" ||
-    host === "0.0.0.0" ||
-    host.endsWith(".localhost") ||
-    host.endsWith(".local") ||
-    host.endsWith(".internal") ||
-    /^127\./.test(host) ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^169\.254\./.test(host) ||
-    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host) ||
-    host === "::1" ||
-    host.startsWith("[fc") ||
-    host.startsWith("[fd")
+    effective === "localhost" ||
+    effective === "0.0.0.0" ||
+    effective.endsWith(".localhost") ||
+    effective.endsWith(".local") ||
+    effective.endsWith(".internal") ||
+    /^127\./.test(effective) ||
+    /^10\./.test(effective) ||
+    /^192\.168\./.test(effective) ||
+    /^169\.254\./.test(effective) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(effective) ||
+    effective === "::1" ||
+    effective === "::" ||
+    effective.startsWith("fc") ||
+    effective.startsWith("fd") ||
+    effective.startsWith("fe80:") ||
+    effective.startsWith("fec0:")
   ) {
     throw new Error("URL host is not allowed");
   }

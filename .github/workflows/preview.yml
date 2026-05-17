@@ -1,0 +1,170 @@
+name: PR Preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  packages: write
+
+jobs:
+  preview:
+    name: Build & smoke-test preview image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hireshield
+          POSTGRES_PASSWORD: hireshield
+          POSTGRES_DB: hireshield
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hireshield"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://hireshield:hireshield@localhost:5432/hireshield
+      IMAGE: ghcr.io/${{ github.repository }}
+      TAG: pr-${{ github.event.pull_request.number }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The `build` stage image contains pnpm, drizzle-kit and the full source
+      # tree — we use it to run migrations against the ephemeral DB.
+      - name: Build build-stage image (for migrations)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: build
+          push: false
+          load: true
+          tags: hireshield-build:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The default (final) stage is the slim runtime image we ship.
+      - name: Build runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: |
+            ${{ env.IMAGE }}:${{ env.TAG }}
+            ${{ env.IMAGE }}:sha-${{ github.event.pull_request.head.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run migrations against ephemeral Postgres
+        run: |
+          docker run --rm \
+            --network host \
+            -e DATABASE_URL="${DATABASE_URL}" \
+            hireshield-build:local \
+            sh -c "pnpm --filter @workspace/db run push"
+
+      # The runtime image already defines STATIC_DIR=/app/public and
+      # SERVE_STATIC=1 — no need to override them here.
+      - name: Boot preview container
+        id: boot
+        run: |
+          CID=$(docker run -d \
+            --network host \
+            -e DATABASE_URL="${DATABASE_URL}" \
+            -e PORT=8080 \
+            "${IMAGE}:${TAG}")
+          echo "cid=$CID" >> "$GITHUB_OUTPUT"
+          # Give it a moment to bind.
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/api/healthz >/dev/null 2>&1; then
+              echo "App is healthy after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "App did not become healthy in 30s"
+          docker logs "$CID"
+          exit 1
+
+      - name: Smoke test — /api/healthz
+        run: |
+          BODY=$(curl -fsS http://localhost:8080/api/healthz)
+          echo "$BODY"
+          echo "$BODY" | grep -q '"status":"ok"'
+
+      - name: Smoke test — POST /api/analyses (heuristic-only, no OpenAI key)
+        run: |
+          RESP=$(curl -fsS -X POST http://localhost:8080/api/analyses \
+            -H "Content-Type: application/json" \
+            -d '{
+              "jobTitle": "Senior Engineer",
+              "company": "Acme Test Corp",
+              "jobDescription": "We are hiring a senior engineer to work on our distributed platform. Compensation 150-200k base. Remote within EU/US time zones. Five years of experience required with Go and Kubernetes."
+            }')
+          echo "$RESP" | head -c 600
+          echo "$RESP" | grep -q '"trustScore"'
+          echo "$RESP" | grep -q '"fraudRisk"'
+
+      - name: Smoke test — /api/community/stats
+        run: |
+          curl -fsS http://localhost:8080/api/community/stats | grep -q '"totalAnalyses"'
+
+      - name: Stop preview container
+        if: always()
+        run: |
+          docker stop "${{ steps.boot.outputs.cid }}" || true
+
+      - name: Push image to GHCR
+        # Skip on forks (no write access to the upstream registry).
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          docker push "${IMAGE}:${TAG}"
+          docker push "${IMAGE}:sha-${{ github.event.pull_request.head.sha }}"
+
+      - name: Comment on PR with run instructions
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview
+          message: |
+            ### 🛡️ HireShield preview build
+
+            Smoke tests passed against `${{ github.event.pull_request.head.sha }}`. To try this PR locally:
+
+            ```bash
+            docker run --rm -p 8080:8080 \
+              -e DATABASE_URL=postgres://user:pass@host:5432/db \
+              -e AI_INTEGRATIONS_OPENAI_BASE_URL=... \
+              -e AI_INTEGRATIONS_OPENAI_API_KEY=... \
+              ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}
+            ```
+
+            Then open <http://localhost:8080>.
+
+            Image digest tags:
+            - `ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}`
+            - `ghcr.io/${{ github.repository }}:sha-${{ github.event.pull_request.head.sha }}`
