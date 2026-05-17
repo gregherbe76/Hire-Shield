@@ -8,11 +8,13 @@
 
 An open-source AI system that detects suspicious recruitment posts, ghost jobs, and phishing attempts — without ever directly accusing a specific company.
 
+[![CI](https://github.com/gh63/hireshield/actions/workflows/ci.yml/badge.svg)](https://github.com/gh63/hireshield/actions/workflows/ci.yml)
 [![Live demo](https://img.shields.io/badge/demo-hire--shield.replit.app-orange?style=flat-square)](https://hire-shield.replit.app)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Node 24](https://img.shields.io/badge/node-24-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/typescript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](CONTRIBUTING.md)
+[![GitHub stars](https://img.shields.io/github/stars/gh63/hireshield?style=flat-square&logo=github)](https://github.com/gh63/hireshield/stargazers)
 
 [**Live demo →**](https://hire-shield.replit.app)
 
@@ -123,6 +125,16 @@ Open the frontend URL. The frontend talks to the API on the same origin via `/ap
 ```bash
 pnpm run typecheck
 ```
+
+### Run the tests
+
+```bash
+pnpm run test
+```
+
+The NLP engine ships with a Vitest suite covering tokenisation, urgency cues,
+suspicious-phrase detection, stylometry, metadata heuristics, and the end-to-end
+fusion. The suite runs in CI on every PR.
 
 ### Regenerate the API client after editing the spec
 
