@@ -28,6 +28,7 @@ export default defineConfig({
     nav: [
       { text: "Guide", link: "/guide/getting-started" },
       { text: "Reference", link: "/reference/api" },
+      { text: "ADRs", link: "/adr/" },
       {
         text: "v0.1",
         items: [
@@ -58,6 +59,34 @@ export default defineConfig({
           items: [
             { text: "API", link: "/reference/api" },
             { text: "Configuration", link: "/reference/configuration" },
+          ],
+        },
+      ],
+      "/adr/": [
+        {
+          text: "Architecture Decisions",
+          items: [
+            { text: "Index", link: "/adr/" },
+            {
+              text: "0001 — Heuristics-first scoring",
+              link: "/adr/0001-heuristics-first-scoring",
+            },
+            {
+              text: "0002 — Never accuse",
+              link: "/adr/0002-never-accuse-framing",
+            },
+            {
+              text: "0003 — Contract-first API",
+              link: "/adr/0003-contract-first-api",
+            },
+            {
+              text: "0004 — Single-process production",
+              link: "/adr/0004-monolithic-single-port",
+            },
+            {
+              text: "0005 — Postgres + Drizzle",
+              link: "/adr/0005-postgres-drizzle",
+            },
           ],
         },
       ],
