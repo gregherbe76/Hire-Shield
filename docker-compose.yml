@@ -36,6 +36,25 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # Optional: seed the database with ~20 demo analyses so the /community
+  # page has interesting content out of the box. Run explicitly with:
+  #   docker compose --profile demo up seed
+  seed:
+    profiles: ["demo"]
+    build:
+      context: .
+      target: build
+    command: pnpm --filter @workspace/scripts run seed:demo
+    environment:
+      DATABASE_URL: postgres://hireshield:hireshield@db:5432/hireshield
+      FORCE_RESEED: ${FORCE_RESEED:-0}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
   app:
     build:
       context: .

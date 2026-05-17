@@ -73,6 +73,28 @@ Releases are automated. Every push to `main` triggers the `Release Please` workf
 
 No manual tagging needed. There's no public package on npm — HireShield is deployed as a hosted app, and forks are expected to deploy their own.
 
+## Getting credit
+
+This project follows the [all-contributors](https://allcontributors.org/) specification. Any kind of contribution counts — code, docs, design, ideas, bug reports, reviews. To add yourself (or someone else), comment on any issue or PR:
+
+```
+@all-contributors please add @your-handle for code, doc
+```
+
+Valid types are listed in the [emoji key](https://allcontributors.org/docs/en/emoji-key). The bot will open a PR updating the README.
+
+## Demo data
+
+When running locally, you can populate the database with ~20 realistic example analyses (a mix of low-risk, medium-risk, and known scam patterns) so the `/community` page has real content while you develop:
+
+```bash
+docker compose --profile demo up seed
+# or, without Docker:
+pnpm --filter @workspace/scripts run seed:demo
+```
+
+The script is idempotent. Pass `FORCE_RESEED=1` to wipe prior seeded rows and reinsert.
+
 ## Documentation
 
 The docs site (built with [VitePress](https://vitepress.dev/)) lives in `docs/` and is published to GitHub Pages at <https://gh63.github.io/hireshield/>. It's a standalone pnpm package — install separately:

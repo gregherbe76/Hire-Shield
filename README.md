@@ -16,6 +16,9 @@ An open-source AI system that detects suspicious recruitment posts, ghost jobs, 
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](CONTRIBUTING.md)
 [![GitHub stars](https://img.shields.io/github/stars/gh63/hireshield?style=flat-square&logo=github)](https://github.com/gh63/hireshield/stargazers)
 [![Release](https://img.shields.io/github/v/release/gh63/hireshield?style=flat-square&logo=github&color=f59e0b)](https://github.com/gh63/hireshield/releases)
+<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 [**Live demo →**](https://hire-shield.replit.app)  ·  [**Documentation →**](https://gh63.github.io/hireshield/)  ·  [**ADRs →**](https://gh63.github.io/hireshield/adr/)
 
@@ -105,6 +108,17 @@ What you get:
 - `app` — the API server **and** the built React frontend, served on a single port
 
 Stop with `docker compose down` (or `down -v` to wipe the database).
+
+#### Want demo data?
+
+To populate the database with ~20 varied example analyses so the
+`/community` page has interesting content out of the box:
+
+```bash
+docker compose --profile demo up seed
+```
+
+Idempotent — re-runs are no-ops unless you set `FORCE_RESEED=1`.
 
 ### Manual setup
 
@@ -199,6 +213,32 @@ Good first issues:
 - Additional language support for tokenization
 - More extractors in `fetch-posting.ts` (LinkedIn, Indeed, etc.)
 - UI polish on `/analyze` and `/community`
+
+### Contributors
+
+Thanks to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/gh63"><img src="https://avatars.githubusercontent.com/u/gh63?v=4" width="80px;" alt="gh63"/><br /><sub><b>gh63</b></sub></a><br /><a href="#maintenance-gh63" title="Maintenance">🚧</a> <a href="https://github.com/gh63/hireshield/commits?author=gh63" title="Code">💻</a> <a href="https://github.com/gh63/hireshield/commits?author=gh63" title="Documentation">📖</a> <a href="#design-gh63" title="Design">🎨</a></td>
+    </tr>
+  </tbody>
+</table>
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://allcontributors.org) specification. Contributions of any kind are welcome — comment on any issue or PR with:
+
+```
+@all-contributors please add @your-handle for code, doc, ideas
+```
+
+and the bot will open a PR adding you to the list above.
 
 ## Security
 
