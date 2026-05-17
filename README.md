@@ -15,8 +15,9 @@ An open-source AI system that detects suspicious recruitment posts, ghost jobs, 
 [![TypeScript](https://img.shields.io/badge/typescript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](CONTRIBUTING.md)
 [![GitHub stars](https://img.shields.io/github/stars/gh63/hireshield?style=flat-square&logo=github)](https://github.com/gh63/hireshield/stargazers)
+[![Release](https://img.shields.io/github/v/release/gh63/hireshield?style=flat-square&logo=github&color=f59e0b)](https://github.com/gh63/hireshield/releases)
 
-[**Live demo →**](https://hire-shield.replit.app)
+[**Live demo →**](https://hire-shield.replit.app)  ·  [**Documentation →**](https://gh63.github.io/hireshield/)
 
 </div>
 

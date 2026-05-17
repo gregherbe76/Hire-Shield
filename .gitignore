@@ -47,3 +47,12 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Docs (VitePress)
+docs/.vitepress/cache
+docs/.vitepress/dist
+docs/node_modules
+docs/pnpm-lock.yaml
+
+# Release artifacts
+CHANGELOG.md.bak

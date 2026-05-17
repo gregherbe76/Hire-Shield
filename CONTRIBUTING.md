@@ -50,15 +50,40 @@ pnpm --filter @workspace/hireshield run dev
 
 ## Commit messages
 
-We loosely follow [Conventional Commits](https://www.conventionalcommits.org/):
+We follow [Conventional Commits](https://www.conventionalcommits.org/). The commit prefix drives our automated release process via [release-please](https://github.com/googleapis/release-please) — it scans merged commits and opens a release PR with the right version bump and changelog entries.
 
 ```
-feat(nlp): add stylometry signal for excessive emoji density
-fix(api): collapse duplicate /analyses route registration
-docs(readme): clarify Apify fallback behaviour
+feat(nlp): add stylometry signal for excessive emoji density     → minor bump
+fix(api): collapse duplicate /analyses route registration        → patch bump
+feat(api)!: change /analyses response shape                      → major bump
+docs(readme): clarify Apify fallback behaviour                   → no release
+chore(deps): bump drizzle-orm to 0.31.0                          → no release
 ```
 
-Not enforced — clear English is fine too — but consistent prefixes help when scanning history.
+Recognized types: `feat`, `fix`, `perf`, `refactor`, `docs`, `build`, `ci`, `chore`, `test`, `style`. Append `!` after the type or include a `BREAKING CHANGE:` footer for major bumps.
+
+Scope is optional but encouraged: `nlp`, `api`, `web`, `db`, `docs`, `deps`.
+
+## Releasing
+
+Releases are automated. Every push to `main` triggers the `Release Please` workflow:
+
+1. It opens (or updates) a release PR containing the next version, an updated `CHANGELOG.md`, and a manifest bump.
+2. When a maintainer merges that PR, the workflow tags `main` and creates a GitHub Release.
+
+No manual tagging needed. There's no public package on npm — HireShield is deployed as a hosted app, and forks are expected to deploy their own.
+
+## Documentation
+
+The docs site (built with [VitePress](https://vitepress.dev/)) lives in `docs/` and is published to GitHub Pages at <https://gh63.github.io/hireshield/>. It's a standalone pnpm package — install separately:
+
+```bash
+cd docs
+pnpm install
+pnpm run dev
+```
+
+When you change behaviour or add a heuristic, please update the relevant guide page in the same PR.
 
 ## Reporting bugs
 
@@ -73,9 +98,5 @@ Open a [bug report](.github/ISSUE_TEMPLATE/bug_report.yml). Include:
 ## Proposing features
 
 Open a [feature request](.github/ISSUE_TEMPLATE/feature_request.yml). Bigger ideas — new heuristics, new data sources, scoring changes — are best discussed in an issue before you write code.
-
-## Releasing
-
-Maintainers cut releases by tagging `main`. There's no public package on npm — HireShield is deployed as a hosted app, and forks are expected to deploy their own.
 
 Thanks again for contributing. 🛡️

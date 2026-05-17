@@ -40,7 +40,7 @@ ENV SERVE_STATIC=1
 
 # Copy only what's needed to run
 COPY --from=build /app/artifacts/api-server/dist ./dist
-COPY --from=build /app/artifacts/hireshield/dist ./public
+COPY --from=build /app/artifacts/hireshield/dist/public ./public
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
 COPY --from=build /app/lib ./lib
