@@ -1,4 +1,6 @@
 import * as cheerio from "cheerio";
+import { lookup as dnsLookup } from "node:dns/promises";
+import { Agent, type Dispatcher } from "undici";
 
 export interface FetchedPosting {
   jobDescription: string;
@@ -8,45 +10,35 @@ export interface FetchedPosting {
 
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 const FETCH_TIMEOUT_MS = 10_000;
+const MAX_REDIRECTS = 5;
 
-function assertSafeUrl(rawUrl: string): URL {
-  let url: URL;
-  try {
-    url = new URL(rawUrl);
-  } catch {
-    throw new Error("Invalid URL");
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("Only http and https URLs are supported");
-  }
-  // Node's URL keeps IPv6 hostnames in bracketed form ("[::1]"), so strip
-  // brackets before comparing — otherwise the loopback check silently misses.
-  const rawHost = url.hostname.toLowerCase();
-  const host =
-    rawHost.startsWith("[") && rawHost.endsWith("]")
-      ? rawHost.slice(1, -1)
-      : rawHost;
+function stripBrackets(host: string): string {
+  return host.startsWith("[") && host.endsWith("]")
+    ? host.slice(1, -1)
+    : host;
+}
 
+function normalizeIpv4Mapped(host: string): string {
   // IPv4-mapped IPv6 has two surface forms:
   //   - dotted-quad:  "::ffff:127.0.0.1"
   //   - hex (the form Node's URL normalizes to):  "::ffff:7f00:1"
   // Round-trip both back to dotted-quad so the IPv4 checks below catch them.
-  let effective = host;
   const dottedMatch =
     /^::(?:ffff:)?((?:\d{1,3}\.){3}\d{1,3})$/.exec(host) ??
     /^::(?:ffff:)?0:((?:\d{1,3}\.){3}\d{1,3})$/.exec(host);
-  if (dottedMatch) {
-    effective = dottedMatch[1]!;
-  } else {
-    const hexMatch = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(host);
-    if (hexMatch) {
-      const hi = parseInt(hexMatch[1]!, 16);
-      const lo = parseInt(hexMatch[2]!, 16);
-      effective = `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
-    }
+  if (dottedMatch) return dottedMatch[1]!;
+  const hexMatch = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(host);
+  if (hexMatch) {
+    const hi = parseInt(hexMatch[1]!, 16);
+    const lo = parseInt(hexMatch[2]!, 16);
+    return `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
   }
+  return host;
+}
 
-  if (
+function isBlockedHost(host: string): boolean {
+  const effective = normalizeIpv4Mapped(host);
+  return (
     effective === "localhost" ||
     effective === "0.0.0.0" ||
     effective.endsWith(".localhost") ||
@@ -63,10 +55,86 @@ function assertSafeUrl(rawUrl: string): URL {
     effective.startsWith("fd") ||
     effective.startsWith("fe80:") ||
     effective.startsWith("fec0:")
-  ) {
+  );
+}
+
+function assertSafeUrl(rawUrl: string): URL {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("Invalid URL");
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("Only http and https URLs are supported");
+  }
+  // Node's URL keeps IPv6 hostnames in bracketed form ("[::1]"), so strip
+  // brackets before comparing — otherwise the loopback check silently misses.
+  const host = stripBrackets(url.hostname.toLowerCase());
+  if (isBlockedHost(host)) {
     throw new Error("URL host is not allowed");
   }
   return url;
+}
+
+interface ResolvedHost {
+  address: string;
+  family: 4 | 6;
+}
+
+/**
+ * Resolve the hostname and reject if any answer falls in the SSRF blocklist.
+ *
+ * The hostname-string check in `assertSafeUrl` is not enough on its own: an
+ * attacker can register a public domain whose A record points at 127.0.0.1
+ * (or 169.254.169.254, etc). Without this resolve-and-check step, the fetch
+ * would happily connect to that internal address.
+ */
+async function resolveAndCheckHost(hostname: string): Promise<ResolvedHost> {
+  const host = stripBrackets(hostname.toLowerCase());
+  let entries: Array<{ address: string; family: number }>;
+  try {
+    entries = await dnsLookup(host, { all: true });
+  } catch {
+    throw new Error("Could not resolve URL host");
+  }
+  if (entries.length === 0) {
+    throw new Error("Could not resolve URL host");
+  }
+  for (const { address } of entries) {
+    if (isBlockedHost(address.toLowerCase())) {
+      throw new Error("URL host resolves to a blocked address");
+    }
+  }
+  const first = entries[0]!;
+  return {
+    address: first.address,
+    family: first.family === 6 ? 6 : 4,
+  };
+}
+
+/**
+ * Build a dispatcher that pins the TCP connection to a specific IP. This
+ * defeats DNS rebinding: even if the resolver returns a fresh (malicious)
+ * answer between our check and the socket connect, we ignore it and connect
+ * to the address we already validated.
+ */
+function makePinnedDispatcher(resolved: ResolvedHost): Dispatcher {
+  return new Agent({
+    connect: {
+      lookup: (
+        _hostname: string,
+        _options: unknown,
+        cb: (
+          err: NodeJS.ErrnoException | null,
+          address: string,
+          family: number,
+        ) => void,
+      ) => {
+        cb(null, resolved.address, resolved.family);
+      },
+    },
+  });
 }
 
 function collapseWhitespace(s: string): string {
@@ -140,6 +208,55 @@ async function fetchPostingViaApify(
   return { jobDescription, jobTitle, company };
 }
 
+/**
+ * Fetch the URL while defending against DNS rebinding. We follow redirects
+ * manually so each hop's host is re-validated and pinned independently —
+ * a 302 to an internal address is rejected the same way the initial URL
+ * would be.
+ */
+async function safeFetchHtml(
+  startUrl: URL,
+  signal: AbortSignal,
+): Promise<{ response: Response; finalUrl: URL }> {
+  let current = startUrl;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const resolved = await resolveAndCheckHost(current.hostname);
+    const dispatcher = makePinnedDispatcher(resolved);
+    const init = {
+      method: "GET",
+      redirect: "manual" as const,
+      signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; HireShieldBot/1.0; +https://hireshield.dev)",
+        Accept: "text/html,application/xhtml+xml",
+      },
+      dispatcher,
+    };
+    const res = await fetch(current.toString(), init as RequestInit);
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location");
+      if (!location) {
+        return { response: res, finalUrl: current };
+      }
+      // Drain & close the redirect body so the socket can be released.
+      await res.body?.cancel().catch(() => {});
+      let next: URL;
+      try {
+        next = new URL(location, current);
+      } catch {
+        throw new Error("Redirect location is not a valid URL");
+      }
+      // Re-run the hostname-string guard on each hop.
+      assertSafeUrl(next.toString());
+      current = next;
+      continue;
+    }
+    return { response: res, finalUrl: current };
+  }
+  throw new Error("Too many redirects");
+}
+
 export async function fetchPostingFromUrl(
   rawUrl: string,
 ): Promise<FetchedPosting> {
@@ -148,21 +265,25 @@ export async function fetchPostingFromUrl(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   let res: Response;
+  let finalUrl: URL;
   try {
-    res = await fetch(url.toString(), {
-      method: "GET",
-      redirect: "follow",
-      signal: controller.signal,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; HireShieldBot/1.0; +https://hireshield.dev)",
-        Accept: "text/html,application/xhtml+xml",
-      },
-    });
+    const result = await safeFetchHtml(url, controller.signal);
+    res = result.response;
+    finalUrl = result.finalUrl;
   } catch (err) {
     clearTimeout(timer);
+    const message = (err as Error).message;
     if ((err as Error).name === "AbortError") {
       throw new Error("Request timed out while fetching the URL");
+    }
+    // Preserve guard messages so callers / tests can distinguish them from
+    // generic network failures.
+    if (
+      /not allowed|blocked address|Invalid URL|http and https|resolve URL host|Too many redirects|Redirect location/i.test(
+        message,
+      )
+    ) {
+      throw err;
     }
     throw new Error("Failed to fetch the URL");
   }
@@ -213,7 +334,7 @@ export async function fetchPostingFromUrl(
 
   const ogSiteName =
     $('meta[property="og:site_name"]').attr("content")?.trim() || "";
-  const company = (ogSiteName || url.hostname).slice(0, 200);
+  const company = (ogSiteName || finalUrl.hostname).slice(0, 200);
 
   // Pick the largest text-bearing region as the body.
   let bestText = "";
@@ -228,11 +349,13 @@ export async function fetchPostingFromUrl(
   const jobDescription = collapseWhitespace(bestText).slice(0, 20000);
   if (jobDescription.length < 400) {
     // Simple fetch returned too little — try Apify (renders JS, bypasses bot walls).
-    const apifyResult = await fetchPostingViaApify(url).catch((err: Error) => {
-      throw new Error(
-        `Page didn't expose enough text via plain fetch, and Apify fallback failed: ${err.message}`,
-      );
-    });
+    const apifyResult = await fetchPostingViaApify(finalUrl).catch(
+      (err: Error) => {
+        throw new Error(
+          `Page didn't expose enough text via plain fetch, and Apify fallback failed: ${err.message}`,
+        );
+      },
+    );
     if (apifyResult) return apifyResult;
     throw new Error(
       "Could not extract a meaningful job description from the page",

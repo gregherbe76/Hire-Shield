@@ -1,5 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock DNS so SSRF tests and response-handling tests don't hit real DNS.
+// We default to a public-looking IP; individual tests override per call.
+vi.mock("node:dns/promises", () => ({
+  lookup: vi.fn(async () => [{ address: "93.184.216.34", family: 4 }]),
+}));
+
+// Mock undici so the pinned dispatcher is a no-op object; the real fetch
+// is stubbed at the global level below and never actually uses it.
+vi.mock("undici", () => ({
+  Agent: class {
+    constructor(_opts: unknown) {}
+  },
+}));
+
+import { lookup as dnsLookup } from "node:dns/promises";
 import { fetchPostingFromUrl } from "./fetch-posting";
+
+// dnsLookup is overloaded; we always call it with { all: true } which returns
+// an array. The mock's typing collapses to the non-array overload, so we cast.
+const mockedLookup = vi.mocked(dnsLookup) as unknown as ReturnType<
+  typeof vi.fn<
+    (
+      hostname: string,
+      options: unknown,
+    ) => Promise<Array<{ address: string; family: number }>>
+  >
+>;
 
 describe("fetchPostingFromUrl — SSRF guard (assertSafeUrl)", () => {
   it("rejects non-http(s) protocols", async () => {
@@ -55,13 +82,102 @@ describe("fetchPostingFromUrl — SSRF guard (assertSafeUrl)", () => {
   });
 });
 
-describe("fetchPostingFromUrl — response handling", () => {
+describe("fetchPostingFromUrl — DNS rebinding defense", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
   });
   afterEach(() => {
     vi.unstubAllGlobals();
+    mockedLookup.mockReset();
+    mockedLookup.mockImplementation(
+      async () => [{ address: "93.184.216.34", family: 4 }],
+    );
+  });
+
+  it.each([
+    ["127.0.0.1", 4],
+    ["10.1.2.3", 4],
+    ["192.168.50.1", 4],
+    ["169.254.169.254", 4], // AWS IMDS
+    ["172.20.0.1", 4],
+    ["::1", 6],
+    ["fc00::1", 6],
+    ["fe80::1", 6],
+  ] as const)(
+    "rejects when a public-looking host resolves to %s",
+    async (address, family) => {
+      mockedLookup.mockResolvedValueOnce([{ address, family }]);
+      await expect(
+        fetchPostingFromUrl("http://attacker.example/job"),
+      ).rejects.toThrow(/blocked address/i);
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects if any one of multiple resolved IPs is blocked", async () => {
+    mockedLookup.mockResolvedValueOnce([
+      { address: "8.8.8.8", family: 4 },
+      { address: "127.0.0.1", family: 4 },
+    ]);
+    await expect(
+      fetchPostingFromUrl("http://attacker.example/job"),
+    ).rejects.toThrow(/blocked address/i);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects when DNS resolution fails", async () => {
+    mockedLookup.mockRejectedValueOnce(new Error("ENOTFOUND"));
+    await expect(
+      fetchPostingFromUrl("http://does-not-exist.example/x"),
+    ).rejects.toThrow(/resolve URL host/i);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects a redirect that points at an internal hostname", async () => {
+    mockedLookup.mockResolvedValueOnce([
+      { address: "93.184.216.34", family: 4 },
+    ]);
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(null, {
+        status: 302,
+        headers: { location: "http://127.0.0.1/admin" },
+      }),
+    );
+    await expect(
+      fetchPostingFromUrl("https://example.com/start"),
+    ).rejects.toThrow(/not allowed/i);
+  });
+
+  it("rejects a redirect whose host resolves to an internal IP", async () => {
+    mockedLookup
+      .mockResolvedValueOnce([{ address: "93.184.216.34", family: 4 }])
+      .mockResolvedValueOnce([{ address: "10.0.0.1", family: 4 }]);
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(null, {
+        status: 302,
+        headers: { location: "http://rebind.example/admin" },
+      }),
+    );
+    await expect(
+      fetchPostingFromUrl("https://example.com/start"),
+    ).rejects.toThrow(/blocked address/i);
+  });
+});
+
+describe("fetchPostingFromUrl — response handling", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+    mockedLookup.mockImplementation(
+      async () => [{ address: "93.184.216.34", family: 4 }],
+    );
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    mockedLookup.mockReset();
+    mockedLookup.mockImplementation(
+      async () => [{ address: "93.184.216.34", family: 4 }],
+    );
   });
 
   function mockResponse(opts: {
@@ -161,5 +277,17 @@ describe("fetchPostingFromUrl — response handling", () => {
     const init = call?.[1] as RequestInit;
     const headers = init.headers as Record<string, string>;
     expect(headers["User-Agent"]).toMatch(/HireShieldBot/);
+  });
+
+  it("passes a pinned dispatcher to fetch so DNS isn't re-resolved", async () => {
+    const html =
+      "<html><head><title>x</title></head><body><main>" +
+      "Job body text. ".repeat(40) +
+      "</main></body></html>";
+    vi.mocked(fetch).mockResolvedValueOnce(mockResponse({ body: html }));
+    await fetchPostingFromUrl("https://example.com/x");
+    const call = vi.mocked(fetch).mock.calls[0];
+    const init = call?.[1] as RequestInit & { dispatcher?: unknown };
+    expect(init.dispatcher).toBeDefined();
   });
 });
