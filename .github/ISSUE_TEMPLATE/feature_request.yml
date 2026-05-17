@@ -1,0 +1,54 @@
+name: Feature request
+description: Suggest a new heuristic, signal, integration, or UI improvement
+title: "feat: "
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the candidate-side or maintainer-side pain point.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you like HireShield to behave?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - NLP heuristics (lib/nlp-engine)
+        - LLM analyzer (api-server)
+        - URL fetcher / extractors
+        - Frontend / UI
+        - API / OpenAPI contract
+        - Database / schema
+        - Docs
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: never-accuse
+    attributes:
+      label: Project principles
+      description: HireShield never directly accuses a specific company. New features must frame findings as *signals* and *confidence*, not as verdicts.
+      options:
+        - label: My proposal respects the "never accuse" principle.
+          required: true
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I agree to follow this project's [Code of Conduct](../CODE_OF_CONDUCT.md).
+          required: true
