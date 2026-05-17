@@ -4,6 +4,7 @@ import { urgencySignals } from "./urgency";
 import { stylometrySignals } from "./stylometry";
 import { metadataSignals } from "./metadata";
 import { duplicateSignals } from "./duplicate";
+import { temporalSignals, type PostingHistory } from "./temporal";
 
 export interface HeuristicInput {
   jobTitle?: string;
@@ -12,6 +13,12 @@ export interface HeuristicInput {
   jobUrl?: string;
   jobDescription: string;
   corpus?: { id: string; description: string }[];
+  /** Self-declared / extracted original posting date. */
+  postedAt?: Date;
+  /** Snapshot of prior submissions of the same fingerprint (from the DB). */
+  history?: PostingHistory;
+  /** Override for "now" — for deterministic tests. */
+  now?: Date;
 }
 
 function clamp(n: number, lo: number, hi: number): number {
@@ -30,6 +37,11 @@ export function runHeuristics(input: HeuristicInput): HeuristicResult {
       company: input.company,
     }),
     ...duplicateSignals(desc, input.corpus ?? []),
+    ...temporalSignals({
+      postedAt: input.postedAt,
+      history: input.history,
+      now: input.now,
+    }),
   ];
 
   // Input richness drives confidence
@@ -40,14 +52,19 @@ export function runHeuristics(input: HeuristicInput): HeuristicResult {
   if (input.jobUrl) confidence += 8;
   if (input.company) confidence += 7;
   if (input.jobTitle) confidence += 5;
+  if (input.postedAt) confidence += 3;
+  if (input.history) confidence += 4;
   confidence = clamp(confidence, 20, 95);
 
-  // Aggregate weighted scores
+  // Trust score: aggregate everything *except* temporal signals — a stale or
+  // republished posting isn't fraud, it's a ghost-job pattern. Temporal flows
+  // into the ghost-job probability below instead.
+  const isFraudCategory = (s: HeuristicSignal) => s.category !== "temporal";
   const totalNegative = signals
-    .filter((s) => (s.score ?? 0) > 0)
+    .filter((s) => isFraudCategory(s) && (s.score ?? 0) > 0)
     .reduce((a, s) => a + (s.score ?? 0), 0);
   const totalPositive = signals
-    .filter((s) => (s.score ?? 0) < 0)
+    .filter((s) => isFraudCategory(s) && (s.score ?? 0) < 0)
     .reduce((a, s) => a + -(s.score ?? 0), 0);
 
   const baseline = 78;
@@ -69,6 +86,13 @@ export function runHeuristics(input: HeuristicInput): HeuristicResult {
     ghost += 22;
   if (/(specific|deadline|by [a-z]+ \d+|q[1-4] \d{4})/i.test(lower)) ghost -= 12;
   if (input.recruiterEmail && /(salary|compensation) range/i.test(desc)) ghost -= 10;
+
+  // Temporal signals push ghost probability up — that's their whole purpose.
+  const temporalGhostBoost = signals
+    .filter((s) => s.category === "temporal")
+    .reduce((a, s) => a + (s.score ?? 0), 0);
+  ghost += temporalGhostBoost;
+
   ghost = clamp(ghost, 2, 98);
 
   return {

@@ -24,4 +24,7 @@ export interface AnalysisInput {
   jobUrl?: string;
   /** @maxLength 20000 */
   jobDescription?: string;
+  /** Optional original posting date. If omitted in URL mode, the server tries to extract it from JSON-LD JobPosting.datePosted. Used to flag stale and republished listings.
+   */
+  postedAt?: Date;
 }

@@ -6,4 +6,6 @@ export * from "./stylometry";
 export * from "./metadata";
 export * from "./duplicate";
 export * from "./analyze";
+export * from "./temporal";
+export * from "./fingerprint";
 export type { HeuristicSignal, HeuristicResult } from "./types";

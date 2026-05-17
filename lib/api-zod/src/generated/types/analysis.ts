@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { FraudRisk } from './fraudRisk';
+import type { PostingHistory } from './postingHistory';
 import type { TrustSignal } from './trustSignal';
 
 export interface Analysis {
@@ -37,5 +38,8 @@ export interface Analysis {
   aiExplanation: string;
   candidateSummary: string;
   recommendedActions?: string[];
+  /** @nullable */
+  postedAt?: Date | null;
+  postingHistory?: PostingHistory | null;
   createdAt: Date;
 }

@@ -7,7 +7,8 @@ export type SignalCategory =
   | "stylometry"
   | "duplicate"
   | "domain"
-  | "llm";
+  | "llm"
+  | "temporal";
 
 export interface HeuristicSignal {
   label: string;

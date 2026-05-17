@@ -15,6 +15,7 @@ export * from './error';
 export * from './fraudRisk';
 export * from './healthStatus';
 export * from './listAnalysesParams';
+export * from './postingHistory';
 export * from './riskBreakdown';
 export * from './signalCategory';
 export * from './signalCount';

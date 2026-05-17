@@ -173,7 +173,7 @@ components:
 
     SignalCategory:
       type: string
-      enum: [nlp, metadata, urgency, stylometry, duplicate, domain, llm]
+      enum: [nlp, metadata, urgency, stylometry, duplicate, domain, llm, temporal]
 
     TrustSignal:
       type: object
@@ -198,6 +198,13 @@ components:
         recruiterEmail: { type: string, maxLength: 320 }
         jobUrl: { type: string, maxLength: 2048, pattern: "^https?://" }
         jobDescription: { type: string, maxLength: 20000 }
+        postedAt:
+          type: string
+          format: date-time
+          description: >
+            Optional original posting date. If omitted in URL mode, the server
+            tries to extract it from JSON-LD JobPosting.datePosted. Used to
+            flag stale and republished listings.
 
     AnalysisSummary:
       type: object
@@ -220,7 +227,21 @@ components:
         confidenceLevel: { type: integer, minimum: 0, maximum: 100 }
         topSignal:
           type: ["string", "null"]
+        postedAt:
+          type: ["string", "null"]
+          format: date-time
         createdAt: { type: string, format: date-time }
+
+    PostingHistory:
+      type: object
+      description: >
+        Summary of prior submissions of the same content fingerprint.
+        seenCount includes the current analysis.
+      required: [firstSeenAt, lastSeenAt, seenCount]
+      properties:
+        firstSeenAt: { type: string, format: date-time }
+        lastSeenAt: { type: string, format: date-time }
+        seenCount: { type: integer, minimum: 1 }
 
     Analysis:
       type: object
@@ -258,6 +279,13 @@ components:
         recommendedActions:
           type: array
           items: { type: string }
+        postedAt:
+          type: ["string", "null"]
+          format: date-time
+        postingHistory:
+          oneOf:
+            - $ref: "#/components/schemas/PostingHistory"
+            - type: "null"
         createdAt: { type: string, format: date-time }
 
     AnalysisExample:

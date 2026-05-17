@@ -48,6 +48,7 @@ export const ListAnalysesResponseItem = zod.object({
   "ghostJobProbability": zod.number().min(listAnalysesResponseGhostJobProbabilityMin).max(listAnalysesResponseGhostJobProbabilityMax),
   "confidenceLevel": zod.number().min(listAnalysesResponseConfidenceLevelMin).max(listAnalysesResponseConfidenceLevelMax),
   "topSignal": zod.string().nullish(),
+  "postedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListAnalysesResponse = zod.array(ListAnalysesResponseItem)
@@ -75,7 +76,8 @@ export const CreateAnalysisBody = zod.object({
   "company": zod.string().max(createAnalysisBodyCompanyMax).optional(),
   "recruiterEmail": zod.string().max(createAnalysisBodyRecruiterEmailMax).optional(),
   "jobUrl": zod.string().max(createAnalysisBodyJobUrlMax).regex(createAnalysisBodyJobUrlRegExp).optional(),
-  "jobDescription": zod.string().max(createAnalysisBodyJobDescriptionMax).optional()
+  "jobDescription": zod.string().max(createAnalysisBodyJobDescriptionMax).optional(),
+  "postedAt": zod.coerce.date().optional().describe('Optional original posting date. If omitted in URL mode, the server tries to extract it from JSON-LD JobPosting.datePosted. Used to flag stale and republished listings.\n')
 }).describe('Provide either jobDescription (paste mode) or jobUrl (fetch mode). If only jobUrl is supplied, the server fetches and extracts the posting text.\n')
 
 
@@ -97,6 +99,7 @@ export const getAnalysisResponseConfidenceLevelMax = 100;
 
 
 
+
 export const GetAnalysisResponse = zod.object({
   "id": zod.string(),
   "jobTitle": zod.string(),
@@ -111,13 +114,19 @@ export const GetAnalysisResponse = zod.object({
   "signals": zod.array(zod.object({
   "label": zod.string(),
   "severity": zod.enum(['info', 'low', 'medium', 'high']),
-  "category": zod.enum(['nlp', 'metadata', 'urgency', 'stylometry', 'duplicate', 'domain', 'llm']),
+  "category": zod.enum(['nlp', 'metadata', 'urgency', 'stylometry', 'duplicate', 'domain', 'llm', 'temporal']),
   "detail": zod.string(),
   "score": zod.number().nullish().describe('Optional numeric weight contributed to the overall score')
 })),
   "aiExplanation": zod.string(),
   "candidateSummary": zod.string(),
   "recommendedActions": zod.array(zod.string()).optional(),
+  "postedAt": zod.coerce.date().nullish(),
+  "postingHistory": zod.union([zod.object({
+  "firstSeenAt": zod.coerce.date(),
+  "lastSeenAt": zod.coerce.date(),
+  "seenCount": zod.number().min(1)
+}).describe('Summary of prior submissions of the same content fingerprint. seenCount includes the current analysis.\n'),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 })
 

@@ -17,4 +17,5 @@ export const SignalCategory = {
   duplicate: 'duplicate',
   domain: 'domain',
   llm: 'llm',
+  temporal: 'temporal',
 } as const;

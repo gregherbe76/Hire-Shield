@@ -30,6 +30,11 @@ const baseSchema = z.object({
     .optional()
     .or(z.literal("")),
   jobDescription: z.string().max(20000).optional().or(z.literal("")),
+  postedAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+    .optional()
+    .or(z.literal("")),
 });
 
 const formSchema = baseSchema.superRefine((val, ctx) => {
@@ -63,6 +68,7 @@ export default function AnalyzePage() {
       recruiterEmail: "",
       jobUrl: "",
       jobDescription: "",
+      postedAt: "",
     },
   });
 
@@ -105,14 +111,19 @@ export default function AnalyzePage() {
     setResult(null);
     
     try {
-      // Strip empty optional strings before sending.
-      const payload: FormValues = {
-        ...data,
+      // Strip empty optional strings before sending. Convert the YYYY-MM-DD
+      // date input into an ISO 8601 date-time at noon UTC so it round-trips
+      // cleanly through the OpenAPI date-time schema.
+      const postedAtIso = data.postedAt?.trim()
+        ? new Date(`${data.postedAt.trim()}T12:00:00Z`).toISOString()
+        : undefined;
+      const payload = {
         jobUrl: data.jobUrl?.trim() || undefined,
         jobDescription: data.jobDescription?.trim() || undefined,
         jobTitle: data.jobTitle?.trim() || undefined,
         company: data.company?.trim() || undefined,
         recruiterEmail: data.recruiterEmail?.trim() || undefined,
+        postedAt: postedAtIso,
       };
       const res = await createAnalysis.mutateAsync({ data: payload });
       // Invalidate caches
@@ -210,13 +221,23 @@ export default function AnalyzePage() {
                       </FormItem>
                     )} />
                   </div>
-                  <FormField control={form.control} name="recruiterEmail" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Recruiter Email <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
-                      <FormControl><Input type="email" placeholder="e.g. hr@acme.com" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="recruiterEmail" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Recruiter Email <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
+                        <FormControl><Input type="email" placeholder="e.g. hr@acme.com" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="postedAt" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Posted On <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
+                        <FormControl><Input type="date" {...field} /></FormControl>
+                        <FormDescription className="text-xs">Helps flag stale or republished postings.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
 
                   <Tabs value={mode} onValueChange={(v) => setMode(v as "paste" | "url")} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">

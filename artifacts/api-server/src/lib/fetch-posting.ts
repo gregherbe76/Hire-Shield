@@ -6,6 +6,89 @@ export interface FetchedPosting {
   jobDescription: string;
   jobTitle?: string;
   company?: string;
+  /** ISO 8601 date string extracted from JSON-LD JobPosting.datePosted or
+   *  comparable meta tags. May be undefined when nothing parseable is found. */
+  postedAt?: string;
+}
+
+/**
+ * Best-effort extraction of the posting's original publication date.
+ * Looks at JSON-LD JobPosting.datePosted first (the most common convention
+ * — LinkedIn, Indeed, Welcome to the Jungle, Greenhouse, Lever, Workday all
+ * expose it), then falls back to common meta tags.
+ *
+ * Exported for unit testing.
+ */
+export function extractPostedAt($: cheerio.CheerioAPI): string | undefined {
+  // 1. JSON-LD JobPosting nodes.
+  const candidates: unknown[] = [];
+  $('script[type="application/ld+json"]').each((_, el) => {
+    const raw = $(el).contents().text();
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) candidates.push(...parsed);
+      else candidates.push(parsed);
+    } catch {
+      // Some sites embed multiple JSON objects per script — try to recover
+      // the first valid one with a relaxed search.
+      const match = raw.match(/\{[\s\S]*?"datePosted"\s*:\s*"([^"]+)"/);
+      if (match) candidates.push({ datePosted: match[1] });
+    }
+  });
+  for (const c of candidates) {
+    const date = pickDatePosted(c);
+    if (date) return date;
+  }
+
+  // 2. Common meta tags.
+  const metaCandidates = [
+    $('meta[itemprop="datePosted"]').attr("content"),
+    $('meta[property="article:published_time"]').attr("content"),
+    $('meta[name="date"]').attr("content"),
+    $('meta[name="pubdate"]').attr("content"),
+    $("time[datetime]").first().attr("datetime"),
+  ];
+  for (const v of metaCandidates) {
+    const iso = toIsoDate(v);
+    if (iso) return iso;
+  }
+  return undefined;
+}
+
+function pickDatePosted(node: unknown): string | undefined {
+  if (!node || typeof node !== "object") return undefined;
+  const obj = node as Record<string, unknown>;
+  const type = obj["@type"];
+  // JobPosting node — happy path.
+  if (
+    typeof obj.datePosted === "string" &&
+    (type === "JobPosting" ||
+      (Array.isArray(type) && type.includes("JobPosting")) ||
+      type === undefined)
+  ) {
+    const iso = toIsoDate(obj.datePosted);
+    if (iso) return iso;
+  }
+  // @graph wrapper: { @graph: [ ... ] }
+  if (Array.isArray(obj["@graph"])) {
+    for (const child of obj["@graph"] as unknown[]) {
+      const iso = pickDatePosted(child);
+      if (iso) return iso;
+    }
+  }
+  return undefined;
+}
+
+function toIsoDate(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return undefined;
+  // Reject obviously bogus dates (before 2000 or more than 1 year in the future).
+  const year = d.getUTCFullYear();
+  const nowYear = new Date().getUTCFullYear();
+  if (year < 2000 || year > nowYear + 1) return undefined;
+  return d.toISOString();
 }
 
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -336,6 +419,8 @@ export async function fetchPostingFromUrl(
     $('meta[property="og:site_name"]').attr("content")?.trim() || "";
   const company = (ogSiteName || finalUrl.hostname).slice(0, 200);
 
+  const postedAt = extractPostedAt($);
+
   // Pick the largest text-bearing region as the body.
   let bestText = "";
   $("main, article, [role=main], section, div").each((_, el) => {
@@ -356,13 +441,13 @@ export async function fetchPostingFromUrl(
         );
       },
     );
-    if (apifyResult) return apifyResult;
+    if (apifyResult) return { ...apifyResult, postedAt };
     throw new Error(
       "Could not extract a meaningful job description from the page",
     );
   }
 
-  return { jobDescription, jobTitle, company };
+  return { jobDescription, jobTitle, company, postedAt };
 }
 
 export async function fetchPostingFromUrlForce(

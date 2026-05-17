@@ -44,6 +44,7 @@ export const SignalCategory = {
   duplicate: 'duplicate',
   domain: 'domain',
   llm: 'llm',
+  temporal: 'temporal',
 } as const;
 
 export interface TrustSignal {
@@ -76,6 +77,9 @@ export interface AnalysisInput {
   jobUrl?: string;
   /** @maxLength 20000 */
   jobDescription?: string;
+  /** Optional original posting date. If omitted in URL mode, the server tries to extract it from JSON-LD JobPosting.datePosted. Used to flag stale and republished listings.
+   */
+  postedAt?: string;
 }
 
 export interface AnalysisSummary {
@@ -100,7 +104,20 @@ export interface AnalysisSummary {
   confidenceLevel: number;
   /** @nullable */
   topSignal?: string | null;
+  /** @nullable */
+  postedAt?: string | null;
   createdAt: string;
+}
+
+/**
+ * Summary of prior submissions of the same content fingerprint. seenCount includes the current analysis.
+
+ */
+export interface PostingHistory {
+  firstSeenAt: string;
+  lastSeenAt: string;
+  /** @minimum 1 */
+  seenCount: number;
 }
 
 export interface Analysis {
@@ -132,6 +149,9 @@ export interface Analysis {
   aiExplanation: string;
   candidateSummary: string;
   recommendedActions?: string[];
+  /** @nullable */
+  postedAt?: string | null;
+  postingHistory?: PostingHistory | null;
   createdAt: string;
 }
 

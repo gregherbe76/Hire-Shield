@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShieldAlert, ShieldCheck, Shield, Activity, Zap, CheckCircle2, AlertTriangle, AlertCircle, FileText, Share2 } from "lucide-react";
+import { ShieldAlert, ShieldCheck, Shield, Activity, Zap, CheckCircle2, AlertTriangle, AlertCircle, FileText, Share2, History } from "lucide-react";
 import { Analysis, TrustSignal, FraudRisk, SignalSeverity, SignalCategory } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -165,6 +165,71 @@ export function AnalysisReport({ analysis }: AnalysisReportProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Posting history */}
+      {(analysis.postedAt || analysis.postingHistory) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <History className="w-5 h-5 text-muted-foreground" />
+              Posting Timeline
+            </CardTitle>
+            <CardDescription>
+              How long this listing has been around and whether we've seen the same content before.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            {analysis.postedAt && (
+              <div>
+                <span className="text-xs uppercase tracking-wider text-muted-foreground font-mono">Originally posted</span>
+                <div className="font-medium mt-1">
+                  {new Date(analysis.postedAt).toLocaleDateString()}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {Math.max(
+                    0,
+                    Math.round(
+                      (Date.now() - new Date(analysis.postedAt).getTime()) / 86_400_000,
+                    ),
+                  )}{" "}
+                  days ago
+                </div>
+              </div>
+            )}
+            {analysis.postingHistory && (
+              <>
+                <div>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground font-mono">Submissions seen</span>
+                  <div className="font-medium mt-1">
+                    {analysis.postingHistory.seenCount}× identical content
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    First on{" "}
+                    {new Date(analysis.postingHistory.firstSeenAt).toLocaleDateString()}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground font-mono">Last submitted</span>
+                  <div className="font-medium mt-1">
+                    {new Date(analysis.postingHistory.lastSeenAt).toLocaleDateString()}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {Math.max(
+                      0,
+                      Math.round(
+                        (Date.now() -
+                          new Date(analysis.postingHistory.lastSeenAt).getTime()) /
+                          86_400_000,
+                      ),
+                    )}{" "}
+                    days ago
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Explanation (Terminal Style) */}
       <Card className="bg-black text-green-500 border-green-500/20 shadow-none font-mono overflow-hidden relative group">

@@ -1,4 +1,8 @@
-import { runHeuristics, fraudRiskFromScore } from "@workspace/nlp-engine";
+import {
+  runHeuristics,
+  fraudRiskFromScore,
+  type PostingHistory,
+} from "@workspace/nlp-engine";
 import type { StoredSignal } from "@workspace/db";
 import { openai, openaiAvailable } from "./openai-client";
 
@@ -9,6 +13,10 @@ export interface AnalyzerInput {
   jobUrl?: string;
   jobDescription: string;
   corpus: { id: string; description: string }[];
+  /** Self-declared / extracted original posting date. */
+  postedAt?: Date;
+  /** Prior submissions of the same fingerprint (looked up by the route). */
+  history?: PostingHistory;
 }
 
 export interface AnalyzerResult {
@@ -76,6 +84,7 @@ Do not include any commentary outside the JSON. Do not wrap it in markdown.`;
 Company: ${input.company}
 Recruiter email: ${input.recruiterEmail ?? "(not provided)"}
 Job URL: ${input.jobUrl ?? "(not provided)"}
+Posted at: ${input.postedAt ? input.postedAt.toISOString() : "(not provided)"}
 
 Job description:
 """
@@ -147,6 +156,8 @@ export async function analyzePosting(
     jobUrl: input.jobUrl,
     jobDescription: input.jobDescription,
     corpus: input.corpus,
+    postedAt: input.postedAt,
+    history: input.history,
   });
 
   const llm = await llmAnalysis(input);

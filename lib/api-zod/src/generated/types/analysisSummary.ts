@@ -29,5 +29,7 @@ export interface AnalysisSummary {
   confidenceLevel: number;
   /** @nullable */
   topSignal?: string | null;
+  /** @nullable */
+  postedAt?: Date | null;
   createdAt: Date;
 }
