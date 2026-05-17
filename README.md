@@ -202,6 +202,7 @@ pnpm --filter @workspace/api-spec run codegen
 - **Never accuse.** All copy is framed around evidence and recommendations, not verdicts about specific employers.
 - **Contract-first API.** `openapi.yaml` drives both the React Query hooks and the Zod validators. Always regenerate after editing the spec.
 - **Path-routed monorepo.** API at `/api/*`, frontend at `/`. Both deploy as a single artifact behind a shared proxy.
+- **Rate limiting + cost circuit breaker.** `POST /api/analyses` is protected by a per-IP rolling-window limiter (default 10/hour, 30/day) plus a global daily cap (default 500/day) that acts as a circuit breaker on OpenAI spend. All three limits are tunable via `RATE_LIMIT_PER_IP_HOURLY`, `RATE_LIMIT_PER_IP_DAILY`, and `RATE_LIMIT_GLOBAL_DAILY` (set to `0` to disable). Limits are in-memory per process — for multi-instance deployments, put a CDN / WAF (or a Redis-backed limiter) in front.
 
 ## Contributing
 

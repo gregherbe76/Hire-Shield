@@ -10,8 +10,14 @@ import {
 } from "@workspace/api-zod";
 import { analyzePosting } from "../lib/analyzer";
 import { fetchPostingFromUrl } from "../lib/fetch-posting";
+import {
+  createRateLimit,
+  defaultRateLimitOptions,
+} from "../middlewares/rate-limit";
 
 const router: IRouter = Router();
+
+const analyzeRateLimit = createRateLimit(defaultRateLimitOptions());
 
 function pickTopSignal(signals: { label: string; severity: string }[]) {
   const order: Record<string, number> = { high: 3, medium: 2, low: 1, info: 0 };
@@ -47,7 +53,7 @@ router.get("/analyses", async (req, res): Promise<void> => {
   res.json(ListAnalysesResponse.parse(payload));
 });
 
-router.post("/analyses", async (req, res): Promise<void> => {
+router.post("/analyses", analyzeRateLimit, async (req, res): Promise<void> => {
   const parsed = CreateAnalysisBody.safeParse(req.body);
   if (!parsed.success) {
     req.log.warn({ errors: parsed.error.message }, "Invalid analysis body");

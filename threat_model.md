@@ -71,7 +71,7 @@ This is low priority since there are no user accounts and no sensitive operation
 
 - **Request body size**: `express.json()` defaults to a 100 KB limit. URL-mode fetches are capped at **2 MB** in `fetch-posting.ts:9`. Plain fetches time out at **10 s**; Apify fallback at **60 s**.
 - **Outbound fetch DoS**: a user could submit a URL that streams data forever. This is bounded by the `MAX_BYTES` guard plus the `AbortController` timeout. Both are required and MUST NOT be relaxed.
-- **Rate limiting**: there is currently **no rate limiting** on `POST /analyses`. This is a known gap. A determined attacker could exhaust the OpenAI quota or fill the database. Self-hosters SHOULD put a rate limiter or CDN in front of the API. The hosted Replit deployment relies on the platform's edge protections.
+- **Rate limiting**: `POST /analyses` is protected by an in-memory per-IP rolling-window limiter (defaults 10/hour, 30/day) plus a global daily cap (default 500/day) that acts as a circuit breaker on OpenAI spend. Limits are tunable via `RATE_LIMIT_PER_IP_HOURLY`, `RATE_LIMIT_PER_IP_DAILY`, and `RATE_LIMIT_GLOBAL_DAILY`. Exhausted limits return `429` with a `Retry-After` header. Because counters live in memory per process, multi-instance deployments SHOULD additionally put a CDN / WAF or Redis-backed limiter in front. The hosted Replit deployment runs as a single instance and also benefits from the platform's edge protections.
 - **LLM cost amplification**: each `POST /analyses` makes one call to `gpt-5.4` with up to 8 KB of user input and `max_completion_tokens: 8192`. An attacker spamming the endpoint can drive up OpenAI spend quickly. Rate limiting + per-IP daily caps SHOULD be added before any production deployment that uses a metered key.
 
 ### Elevation of Privilege
@@ -95,4 +95,4 @@ The following invariants must hold for any code merged to `main`:
 6. Error responses MUST NOT include stack traces or internal paths.
 7. Secrets (`AI_INTEGRATIONS_OPENAI_API_KEY`, `DATABASE_URL`, `APIFY_TOKEN`) MUST never be read on the client and MUST never appear in responses or logs.
 8. Product copy MUST never directly accuse a named company of fraud — only describe signals and recommend verification.
-9. Self-hosters SHOULD put a rate limiter in front of `POST /analyses` before exposing to the public internet; this is documented in `SECURITY.md`.
+9. `POST /analyses` MUST remain protected by the per-IP and global daily rate limiter (`artifacts/api-server/src/middlewares/rate-limit.ts`). Self-hosters running multiple instances SHOULD additionally put a CDN / WAF or shared-store limiter in front, since the built-in limiter is per-process.

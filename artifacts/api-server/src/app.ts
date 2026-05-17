@@ -8,6 +8,24 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// Behind the Replit shared proxy (and most production reverse proxies), the
+// real client IP is in X-Forwarded-For. We need `req.ip` to be the caller's
+// IP for per-IP rate limiting to work — but trusting *all* hops would let an
+// attacker spoof X-Forwarded-For and rotate fake IPs to bypass limits.
+//
+// Default: trust exactly 1 upstream hop (the Replit shared proxy / typical
+// CDN). Override with TRUST_PROXY when deploying behind multiple proxies.
+// Accepts a hop count ("2"), a single subnet ("10.0.0.0/8"), a comma-
+// separated list, or "false" to disable.
+const trustProxyRaw = process.env["TRUST_PROXY"] ?? "1";
+const trustProxy: number | string | boolean =
+  trustProxyRaw === "false"
+    ? false
+    : /^\d+$/.test(trustProxyRaw)
+      ? Number.parseInt(trustProxyRaw, 10)
+      : trustProxyRaw;
+app.set("trust proxy", trustProxy);
+
 app.use(
   pinoHttp({
     logger,
