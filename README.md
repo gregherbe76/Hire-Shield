@@ -31,9 +31,18 @@ Job scams and ghost listings are exploding. Candidates spend hours tailoring app
 - 🔗 **Paste text or a URL.** Drop a job description in, or paste a URL — HireShield fetches and parses the posting (with an optional JS-rendering fallback).
 - 📊 **Community telemetry.** Aggregated stats across all analyses: risk breakdown, top detected signals, ghost-job share, live feed.
 
-## Screenshot
+## Demo
+
+![HireShield analyzing a job posting](.github/assets/demo.svg)
+
+> Paste a URL → 7-dimension trust report in seconds. [Try the live demo →](https://hire-shield.replit.app)
+
+<details>
+<summary>Landing page screenshot</summary>
 
 ![HireShield landing page](attached_assets/screenshots/hire-shield_replit_app.png)
+
+</details>
 
 ## Features
 
