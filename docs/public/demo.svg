@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 480" width="880" height="480" font-family="ui-monospace,'JetBrains Mono','Geist Mono',monospace">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A0A0F"/>
+      <stop offset="100%" stop-color="#15151F"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF8A00"/>
+      <stop offset="100%" stop-color="#FF3C00"/>
+    </linearGradient>
+    <linearGradient id="ok" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#16A34A"/>
+    </linearGradient>
+    <linearGradient id="bad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#B91C1C"/>
+    </linearGradient>
+    <style>
+      .frame { opacity: 0; }
+      .typed { opacity: 0; }
+
+      .f1 { animation: show 12s 0s infinite; }
+      .f2 { animation: show 12s 4s infinite; }
+      .f3 { animation: show 12s 7s infinite; }
+
+      @keyframes show {
+        0%, 30% { opacity: 1; }
+        33%, 100% { opacity: 0; }
+      }
+
+      .caret { animation: blink 1s steps(2) infinite; }
+      @keyframes blink { 50% { opacity: 0; } }
+
+      .t1 { animation: type 4s 0s infinite; }
+      .t2 { animation: type 4s 0.4s infinite; }
+      .t3 { animation: type 4s 0.8s infinite; }
+      .t4 { animation: type 4s 1.2s infinite; }
+      .t5 { animation: type 4s 1.6s infinite; }
+      .t6 { animation: type 4s 2.0s infinite; }
+      .t7 { animation: type 4s 2.4s infinite; }
+      .t8 { animation: type 4s 2.8s infinite; }
+      .t9 { animation: type 4s 3.2s infinite; }
+      .t10 { animation: type 4s 3.6s infinite; }
+      @keyframes type {
+        0%, 8% { opacity: 0; }
+        10%, 100% { opacity: 1; }
+      }
+
+      .spin { transform-origin: 440px 240px; animation: spin 1.5s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      .score-num { animation: count 1.6s ease-out 7s both infinite; }
+      @keyframes count {
+        0% { opacity: 0; transform: translateY(8px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+
+      .bar { transform-origin: left center; animation: grow 1.4s ease-out 7.2s both infinite; }
+      @keyframes grow {
+        0% { transform: scaleX(0); }
+        100% { transform: scaleX(1); }
+      }
+
+      .sig { opacity: 0; animation: fade-in 0.4s ease-out both infinite; }
+      .s1 { animation-delay: 7.6s; }
+      .s2 { animation-delay: 7.9s; }
+      .s3 { animation-delay: 8.2s; }
+      @keyframes fade-in {
+        0% { opacity: 0; transform: translateY(4px); }
+        20%, 100% { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+  </defs>
+
+  <rect width="880" height="480" rx="14" fill="url(#bg)"/>
+  <g transform="translate(28,22)" fill="#9A9AA8">
+    <circle cx="0" cy="0" r="6" fill="#FF5F57"/>
+    <circle cx="20" cy="0" r="6" fill="#FEBC2E"/>
+    <circle cx="40" cy="0" r="6" fill="#28C840"/>
+    <text x="80" y="5" font-size="12" fill="#6B6B7A">hire-shield.replit.app / analyze</text>
+  </g>
+  <line x1="0" y1="56" x2="880" y2="56" stroke="#22222C" stroke-width="1"/>
+
+  <g transform="translate(40,90)">
+    <rect width="40" height="40" rx="10" fill="url(#orange)"/>
+    <path d="M16 22 L22 28 L32 16" stroke="#0A0A0F" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <text x="56" y="18" font-size="20" font-weight="700" fill="#F5F5F7">HireShield</text>
+    <text x="56" y="36" font-size="12" fill="#6B6B7A">Know if a job is real before you apply.</text>
+  </g>
+
+  <g class="frame f1">
+    <text x="40" y="170" font-size="14" fill="#9A9AA8">Paste a job URL</text>
+    <rect x="40" y="184" width="800" height="56" rx="10" fill="#0F0F18" stroke="#22222C"/>
+    <g transform="translate(60,218)" font-size="16" fill="#F5F5F7">
+      <tspan class="typed t1">h</tspan><tspan class="typed t2">t</tspan><tspan class="typed t3">t</tspan><tspan class="typed t4">p</tspan><tspan class="typed t5">s</tspan><tspan class="typed t6">:</tspan><tspan class="typed t7">/</tspan><tspan class="typed t8">/</tspan><tspan class="typed t9">careers.example.io/</tspan><tspan class="typed t10">job/sr-engineer</tspan>
+      <tspan class="caret" fill="#FF8A00">▍</tspan>
+    </g>
+    <rect x="40" y="270" width="180" height="44" rx="8" fill="url(#orange)"/>
+    <text x="80" y="298" font-size="14" font-weight="700" fill="#0A0A0F">Analyze →</text>
+    <text x="40" y="360" font-size="12" fill="#6B6B7A">Heuristics-first NLP · LLM context · never accuses</text>
+  </g>
+
+  <g class="frame f2">
+    <g class="spin">
+      <circle cx="440" cy="240" r="28" fill="none" stroke="#22222C" stroke-width="4"/>
+      <path d="M440 212 A28 28 0 0 1 468 240" fill="none" stroke="url(#orange)" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <text x="440" y="300" font-size="14" fill="#9A9AA8" text-anchor="middle">Running heuristics · contacting analyzer…</text>
+    <text x="440" y="324" font-size="11" fill="#6B6B7A" text-anchor="middle">7 signals · stylometry · urgency · metadata · duplicate</text>
+  </g>
+
+  <g class="frame f3">
+    <g transform="translate(40,150)">
+      <rect width="800" height="60" rx="10" fill="#0F0F18" stroke="#22222C"/>
+      <text x="20" y="26" font-size="12" fill="#6B6B7A">TRUST SCORE</text>
+      <text x="20" y="50" class="score-num" font-size="28" font-weight="700" fill="#22C55E">82 / 100</text>
+      <text x="180" y="26" font-size="12" fill="#6B6B7A">RISK</text>
+      <text x="180" y="50" font-size="18" font-weight="700" fill="#22C55E">Low</text>
+      <text x="290" y="26" font-size="12" fill="#6B6B7A">GHOST JOB</text>
+      <text x="290" y="50" font-size="18" font-weight="700" fill="#F5F5F7">22%</text>
+      <text x="420" y="26" font-size="12" fill="#6B6B7A">CONFIDENCE</text>
+      <text x="420" y="50" font-size="18" font-weight="700" fill="#F5F5F7">88%</text>
+    </g>
+
+    <g transform="translate(40,232)">
+      <rect width="800" height="6" rx="3" fill="#22222C"/>
+      <rect class="bar" width="656" height="6" rx="3" fill="url(#ok)"/>
+    </g>
+
+    <g transform="translate(40,260)" font-size="13" fill="#F5F5F7">
+      <g class="sig s1" transform="translate(0,0)">
+        <rect width="800" height="38" rx="8" fill="#0F0F18" stroke="#22222C"/>
+        <circle cx="16" cy="19" r="4" fill="#22C55E"/>
+        <text x="32" y="24">Discloses salary range and structured benefits</text>
+        <text x="780" y="24" text-anchor="end" fill="#22C55E">trust +4</text>
+      </g>
+      <g class="sig s2" transform="translate(0,48)">
+        <rect width="800" height="38" rx="8" fill="#0F0F18" stroke="#22222C"/>
+        <circle cx="16" cy="19" r="4" fill="#22C55E"/>
+        <text x="32" y="24">Recruiter email matches the company domain</text>
+        <text x="780" y="24" text-anchor="end" fill="#22C55E">trust +10</text>
+      </g>
+      <g class="sig s3" transform="translate(0,96)">
+        <rect width="800" height="38" rx="8" fill="#0F0F18" stroke="#22222C"/>
+        <circle cx="16" cy="19" r="4" fill="#FF8A00"/>
+        <text x="32" y="24">Minor urgency language detected (1 cue)</text>
+        <text x="780" y="24" text-anchor="end" fill="#FF8A00">risk +7</text>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -37,9 +37,13 @@ Job scams and ghost listings are exploding. Candidates spend hours tailoring app
 
 ## Demo
 
-![HireShield analyzing a job posting](.github/assets/demo.svg)
+<a href="https://hire-shield.replit.app">
+  <img src=".github/assets/demo.gif" alt="HireShield analyzing a job posting" />
+</a>
 
-> Paste a URL → 7-dimension trust report in seconds. [Try the live demo →](https://hire-shield.replit.app)
+<sub>Animated GIF above. <a href=".github/assets/demo.mp4">Download the MP4 (1.4 MB)</a> or watch it on the <a href="https://hire-shield.replit.app">live demo →</a></sub>
+
+> ~45-second animated walkthrough of HireShield: landing → paste a posting → trust report → community telemetry. Source lives in the [`hireshield-demo` video artifact](artifacts/hireshield-demo/); re-record with `node scripts/record-demo.mjs` after starting the artifact.
 
 <details>
 <summary>Landing page screenshot</summary>

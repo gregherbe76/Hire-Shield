@@ -1,0 +1,31 @@
+kind = "video"
+previewPath = "/hireshield-demo/"
+title = "HireShield Demo Video"
+version = "1.0.0"
+id = "artifacts/hireshield-demo"
+router = "path"
+
+[[integratedSkills]]
+name = "video-js"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/hireshield-demo/" ]
+localPort = 25365
+
+[services.development]
+run = "pnpm --filter @workspace/hireshield-demo run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/hireshield-demo", "run", "build" ]
+publicDir = "artifacts/hireshield-demo/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25365"
+BASE_PATH = "/hireshield-demo/"

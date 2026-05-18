@@ -48,6 +48,17 @@ features:
 }
 </style>
 
+## See it in action
+
+A ~45-second animated walkthrough: landing → paste a posting → trust report → community telemetry.
+
+<video controls loop muted playsinline poster="/hireshield/demo.svg" style="width:100%; border-radius:8px;">
+  <source src="/hireshield/demo.mp4" type="video/mp4" />
+  <a href="https://hire-shield.replit.app"><img src="/hireshield/demo.gif" alt="HireShield walkthrough" /></a>
+</video>
+
+> Source lives in the [`hireshield-demo` video artifact](https://github.com/gh63/hireshield/tree/main/artifacts/hireshield-demo); re-record with `node scripts/record-demo.mjs` after starting the artifact.
+
 ## Quick start
 
 ```bash
