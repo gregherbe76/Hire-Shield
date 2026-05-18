@@ -1,6 +1,6 @@
 {
   "name": "hireshield",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Open-source AI that detects suspicious job postings, ghost jobs, and recruitment phishing — without accusing specific employers.",
   "license": "MIT",
   "keywords": [
