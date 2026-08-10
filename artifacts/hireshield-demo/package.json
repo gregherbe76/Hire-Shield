@@ -10,9 +10,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@react-spring/web": "^10.0.3",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.5.0",
+    "@react-spring/web": "^10.1.2",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
     "@replit/vite-plugin-cartographer": "catalog:",
     "@replit/vite-plugin-dev-banner": "catalog:",
     "@replit/vite-plugin-runtime-error-modal": "catalog:",
@@ -30,7 +30,7 @@
     "react-dom": "catalog:",
     "tailwind-merge": "catalog:",
     "tailwindcss": "catalog:",
-    "three": "^0.182.0",
+    "three": "^0.185.1",
     "vite": "catalog:"
   }
 }
